@@ -37,4 +37,20 @@ if (!context.importState.importMessages.some((message) => message.includes("合�
   throw new Error("合計列が曖昧な資産CSVを案内できません");
 }
 
+for (const totalHeader of ["合計", "総額", "純資産", "総資産", "残高合計"]) {
+  const isolated = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
+  vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state; globalThis.classifyHeaders = classify;`, isolated);
+  await isolated.loadFiles([new File([
+    `日付,${totalHeader},${totalHeader}\n2026-06-30,100,100\n`,
+  ], "ambiguous.csv")]);
+  if (isolated.importState.assets.length !== 0 || isolated.importState.transactions.length !== 0 ||
+      isolated.importState.importMessages.length !== 1 ||
+      !isolated.importState.importMessages[0].includes("合計列が曖昧")) {
+    throw new Error(`重複した${totalHeader}列だけのCSVを正しく拒否・案内できません`);
+  }
+  if (isolated.classifyHeaders(["日付", totalHeader, totalHeader, "金額"]) !== "transactions") {
+    throw new Error("合計列が重複した明細CSVを資産CSVと誤判定しています");
+  }
+}
+
 console.log("Asset schema checks passed.");
