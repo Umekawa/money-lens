@@ -10,7 +10,12 @@ const html = await readFile("index.html", "utf8");
 if (!html.includes('src="app.js"')) throw new Error("index.html does not load app.js");
 if (!html.includes('href="styles.css"')) throw new Error("index.html does not load styles.css");
 
-const trackedCsv = execFileSync("git", ["ls-files", "*.csv"], { encoding: "utf8" }).trim();
-if (trackedCsv) throw new Error(`Personal CSV is tracked by git: ${trackedCsv}`);
+const trackedCsv = execFileSync("git", ["ls-files", "*.csv"], { encoding: "utf8" })
+  .trim()
+  .split(/\r?\n/)
+  .filter((file) => file && !file.replaceAll("\\", "/").startsWith("samples/"));
+if (trackedCsv.length) throw new Error(`Personal CSV is tracked by git: ${trackedCsv.join(", ")}`);
+
+execFileSync(process.execPath, ["scripts/test-samples.mjs"], { stdio: "inherit" });
 
 console.log("Local checks passed.");
