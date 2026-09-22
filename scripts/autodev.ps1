@@ -1,7 +1,13 @@
 ﻿param(
   [ValidateRange(1, 10)]
   [int]$Cycles = 1,
-  [string]$OpenCodeBin = $env:OPENCODE_BIN
+  [string]$OpenCodeBin = $env:OPENCODE_BIN,
+  [switch]$Continuous,
+  [switch]$PublishCurrentChanges,
+  [ValidateRange(1, 1440)]
+  [int]$IntervalMinutes = 10,
+  [ValidateRange(1, 3)]
+  [int]$ReviewAttempts = 2
 )
 
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
@@ -18,6 +24,11 @@ if (-not $ghCommand) {
   throw 'GitHub CLI was not found. Install gh and run gh auth login before using autodev.'
 }
 
+$repo = (& $ghCommand repo view --json nameWithOwner --jq '.nameWithOwner' 2>$null).Trim()
+if ($LASTEXITCODE -ne 0 -or -not $repo) {
+  throw 'The current directory is not an accessible GitHub repository. Check gh auth login and the git remote.'
+}
+
 $promptBase = @(
   'Run one autonomous development cycle for this repository.',
   'Work only on the selected issue or one small, clearly useful self-discovered improvement.',
@@ -28,17 +39,65 @@ $promptBase = @(
   'Report the work done, test result, and any concerns briefly.'
 )
 
-for ($i = 1; $i -le $Cycles; $i++) {
-  Write-Host "=== Auto-dev cycle $i/$Cycles ===" -ForegroundColor Cyan
+$reviewPrompt = @(
+  'Review the pull request currently open for this branch.',
+  'You are the second, independent reviewer in an autonomous development cycle.',
+  'Read the diff and surrounding code carefully. Do not read or modify personal CSV files, the csvs directory, or secrets.',
+  'Fix any concrete correctness, security, accessibility, privacy, or regression problems you find.',
+  'Keep the change narrowly scoped to the selected Issue or improvement.',
+  'Run npm run check after any fix. Do not commit, push, merge, close Issues, or change repository visibility.',
+  'If the change is sound, finish your response with exactly REVIEW_PASS.',
+  'If you cannot fix a concrete problem, finish with exactly REVIEW_FAIL and explain the remaining problem.'
+)
 
-  if ((git status --porcelain).Length -gt 0) { throw 'Working tree is not clean. Review or commit existing changes first.' }
-  git switch main
-  if ($LASTEXITCODE -ne 0) { throw 'Could not switch to main.' }
-  git pull --ff-only origin main
-  if ($LASTEXITCODE -ne 0) { throw 'Could not fast-forward main.' }
+function Assert-SafeChanges {
+  $unsafe = @(git status --porcelain=v1 | ForEach-Object {
+      if ($_.Length -lt 4) { return }
+      $path = $_.Substring(3).Trim('"').Replace('\', '/')
+      if ($path -match '(^|/)csvs(/|$)' -or
+          ($path -match '\.csv$' -and $path -notmatch '^samples/') -or
+          $path -match '(^|/)(\.env($|\.)|.*(secret|credential).*)' -or
+          $path -match '\.(pem|key)$') { $path }
+    })
+  if ($unsafe.Count -gt 0) {
+    throw "Refusing to stage personal CSV or secret-looking files: $($unsafe -join ', ')"
+  }
+}
+
+function Publish-LocalChanges {
+  param([string]$Branch, [string]$CommitMessage)
+  Assert-SafeChanges
+  if ((git status --porcelain).Length -gt 0) {
+    git add -A
+    if ($LASTEXITCODE -ne 0) { throw 'Could not stage changes.' }
+    git commit -m $CommitMessage
+    if ($LASTEXITCODE -ne 0) { throw 'Could not commit changes.' }
+  }
+  $ahead = [int](git rev-list --count "origin/$Branch..HEAD")
+  if ($ahead -gt 0) {
+    git push -u origin $Branch
+    if ($LASTEXITCODE -ne 0) { throw 'Could not push changes.' }
+  }
+}
+
+$cycle = 0
+while ($Continuous -or $cycle -lt $Cycles) {
+  $cycle++
+  $cycleLabel = if ($Continuous) { "$cycle (continuous)" } else { "$cycle/$Cycles" }
+  Write-Host "=== Auto-dev cycle $cycleLabel ===" -ForegroundColor Cyan
+
+  if ($PublishCurrentChanges) {
+    if ((git status --porcelain).Length -eq 0) { throw 'There are no current changes to publish.' }
+  } else {
+    if ((git status --porcelain).Length -gt 0) { throw 'Working tree is not clean. Review or commit existing changes first.' }
+    git switch main
+    if ($LASTEXITCODE -ne 0) { throw 'Could not switch to main.' }
+    git pull --ff-only origin main
+    if ($LASTEXITCODE -ne 0) { throw 'Could not fast-forward main.' }
+  }
 
   $issue = $null
-  $issueLines = & $ghCommand issue list --repo Umekawa/money-lens --state open --limit 20 --json number,title --jq '.[] | [.number, .title] | @tsv'
+  $issueLines = & $ghCommand issue list --repo $repo --state open --limit 20 --json number,title --jq '.[] | [.number, .title] | @tsv'
   if ($LASTEXITCODE -eq 0 -and $issueLines) {
     $issues = @($issueLines | ForEach-Object {
       $parts = $_ -split "`t", 2
@@ -59,13 +118,18 @@ for ($i = 1; $i -le $Cycles; $i++) {
   if ($LASTEXITCODE -ne 0) { throw "Could not create branch $branch." }
 
   $prompt = (@($promptBase) + $issueInstruction) -join [Environment]::NewLine
-  & $command run $prompt
-  if ($LASTEXITCODE -ne 0) { throw "OpenCode exited with code $LASTEXITCODE" }
+  if ($PublishCurrentChanges) {
+    Write-Host '既存の変更を公開対象として使用します。' -ForegroundColor Yellow
+  } else {
+    & $command run $prompt
+    if ($LASTEXITCODE -ne 0) { throw "OpenCode exited with code $LASTEXITCODE" }
+  }
 
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed. The branch was left for investigation.' }
 
   if ((git status --porcelain).Length -gt 0) {
+    Assert-SafeChanges
     git add -A
     $commitMessage = if ($issue) { "対応: $($issue.title)" } else { '自動開発: 改善を実装' }
     git commit -m $commitMessage
@@ -76,11 +140,28 @@ for ($i = 1; $i -le $Cycles; $i++) {
   if ($ahead -eq 0) {
     Write-Host 'No changes were produced; skipping PR.' -ForegroundColor Yellow
     git switch main
+    if ($Continuous) { Start-Sleep -Seconds ($IntervalMinutes * 60) }
     continue
   }
 
   git push -u origin $branch
   if ($LASTEXITCODE -ne 0) { throw 'Could not push the development branch.' }
+
+  $prTitle = if ($issue) { "対応: $($issue.title)" } else { '自動検出した改善' }
+  if (-not $issue) {
+    $discoveryBody = @(
+      '## 概要',
+      '自動開発サイクルでコードとUIを確認し、実装対象として記録した改善です。',
+      '',
+      '## 注意',
+      '個人CSV、個人情報、秘密情報は対象外です。'
+    ) -join [Environment]::NewLine
+    $issueUrl = & $ghCommand issue create --repo $repo --title $prTitle --body $discoveryBody
+    if ($LASTEXITCODE -ne 0) { throw 'Could not create the discovered Issue.' }
+    $discoveredNumber = [regex]::Match(($issueUrl -join "`n"), '/issues/(\d+)').Groups[1].Value
+    if (-not $discoveredNumber) { throw 'Could not determine the discovered Issue number.' }
+    $issue = [pscustomobject]@{ number = [int]$discoveredNumber; title = $prTitle }
+  }
 
   $bodyLines = @(
     '## 概要',
@@ -94,15 +175,48 @@ for ($i = 1; $i -le $Cycles; $i++) {
     '- 個人CSVや個人情報はコミットしていません'
   )
   $body = $bodyLines -join [Environment]::NewLine
-  $prTitle = if ($issue) { "対応: $($issue.title)" } else { '自動検出した改善' }
-  $prUrl = & $ghCommand pr create --repo Umekawa/money-lens --base main --head $branch --title $prTitle --body $body
+  $prUrl = & $ghCommand pr create --repo $repo --base main --head $branch --title $prTitle --body $body
   if ($LASTEXITCODE -ne 0) { throw 'Could not create the pull request.' }
   $prNumber = [regex]::Match(($prUrl -join "`n"), '/pull/(\d+)').Groups[1].Value
   if (-not $prNumber) { throw 'Could not determine the pull request number.' }
 
+  # Create the PR before review so the reviewer has the exact GitHub context.
+  $reviewPassed = $false
+  for ($reviewAttempt = 1; $reviewAttempt -le $ReviewAttempts; $reviewAttempt++) {
+    Write-Host "AIレビュー $reviewAttempt/$ReviewAttempts..." -ForegroundColor Magenta
+    $reviewOutput = & $command run ((@($reviewPrompt) + "PR: https://github.com/$repo/pull/$prNumber") -join [Environment]::NewLine) 2>&1 | Out-String
+    $reviewExitCode = $LASTEXITCODE
+    Write-Host $reviewOutput
+    if ($reviewExitCode -eq 0 -and $reviewOutput -match '(?m)^\s*REVIEW_PASS\s*$') {
+      # A reviewer may have left a fix uncommitted. Publish it and require a
+      # fresh review so that code added after the pass is never merged unseen.
+      if ((git status --porcelain).Length -gt 0) {
+        Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
+        if ($reviewAttempt -lt $ReviewAttempts) { continue }
+        throw 'The final AI review left changes that require another review.'
+      }
+      # Also publish commits the reviewer may have created itself.
+      Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
+      $reviewPassed = $true
+      break
+    }
+    if ($reviewAttempt -lt $ReviewAttempts) {
+      Write-Host 'レビューで問題が見つかったため、修正後に再レビューします。' -ForegroundColor Yellow
+      Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
+    }
+  }
+  if (-not $reviewPassed) {
+    throw "AI review did not pass for pull request #$prNumber. The PR was left open for investigation."
+  }
+  & $ghCommand pr comment $prNumber --repo $repo --body 'AIレビュー: REVIEW_PASS。ローカルチェックとGitHub Actionsの完了を待ってマージします。'
+  if ($LASTEXITCODE -ne 0) { throw 'Could not add the AI review comment.' }
+
+  npm run check
+  if ($LASTEXITCODE -ne 0) { throw 'Local check failed after AI review.' }
+
   $checksReady = $false
   for ($attempt = 1; $attempt -le 12; $attempt++) {
-    $checkJson = & $ghCommand pr view $prNumber --repo Umekawa/money-lens --json statusCheckRollup
+    $checkJson = & $ghCommand pr view $prNumber --repo $repo --json statusCheckRollup
     if ($LASTEXITCODE -eq 0 -and $checkJson) {
       $checkData = $checkJson | ConvertFrom-Json
       if (@($checkData.statusCheckRollup).Count -gt 0) { $checksReady = $true; break }
@@ -111,12 +225,16 @@ for ($i = 1; $i -le $Cycles; $i++) {
     Start-Sleep -Seconds 5
   }
   if (-not $checksReady) { throw "No checks were registered for pull request #$prNumber." }
-  & $ghCommand pr checks $prNumber --repo Umekawa/money-lens --watch --interval 5
+  & $ghCommand pr checks $prNumber --repo $repo --watch --interval 5
   if ($LASTEXITCODE -ne 0) { throw "Pull request checks failed for #$prNumber." }
-  & $ghCommand pr merge $prNumber --repo Umekawa/money-lens --squash --delete-branch --subject $prTitle --body '自動開発サイクルで実装。ローカルチェックとGitHub Actionsを通過。'
+  & $ghCommand pr merge $prNumber --repo $repo --squash --delete-branch --subject $prTitle --body '自動開発サイクルで実装。AIレビュー、ローカルチェック、GitHub Actionsを通過。'
   if ($LASTEXITCODE -ne 0) { throw "Could not merge pull request #$prNumber." }
 
   git switch main
   git pull --ff-only origin main
   Write-Host "Merged PR #$prNumber" -ForegroundColor Green
+  if ($Continuous) {
+    Write-Host "次のサイクルまで $IntervalMinutes 分待機します。停止は Ctrl+C です。" -ForegroundColor Cyan
+    Start-Sleep -Seconds ($IntervalMinutes * 60)
+  }
 }
