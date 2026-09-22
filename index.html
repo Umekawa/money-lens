@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>お金ダッシュボード</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">PERSONAL FINANCE</p><h1>お金ダッシュボード</h1></div>
+    <div class="import-actions"><label class="secondary-button">csvsフォルダを読み込む<input id="folderInput" type="file" webkitdirectory directory multiple></label><label class="import-button">CSVを追加<input id="fileInput" type="file" accept=".csv,text/csv" multiple></label></div>
+  </header>
+
+  <main class="container">
+    <section id="emptyState" class="card empty-state">
+      <div class="empty-icon">￥</div>
+      <h2>あなたのお金を、見やすく。</h2>
+      <p>マネーフォワードのCSVを読み込むと、支出・収支・資産の推移をこのブラウザ内だけで分析できます。</p>
+      <div class="import-actions center"><label class="primary-button">CSVを選択<input id="emptyFileInput" type="file" accept=".csv,text/csv" multiple></label><label class="secondary-button">フォルダを選択<input id="emptyFolderInput" type="file" webkitdirectory directory multiple></label></div>
+      <small>データは外部へ送信されません。Shift_JISのCSVにも対応しています。</small>
+    </section>
+
+    <div id="dashboard" hidden>
+      <section class="summary-grid">
+        <article class="card metric"><span>表示期間</span><strong id="period">—</strong><small id="transactionCount">明細 0件</small></article>
+        <article class="card metric"><span>収入</span><strong id="income">—</strong><small>プラスの明細合計</small></article>
+        <article class="card metric"><span>支出</span><strong id="expense">—</strong><small>マイナスの明細合計</small></article>
+        <article class="card metric accent"><span>収支</span><strong id="balance">—</strong><small>収入 − 支出</small></article>
+      </section>
+
+      <section class="grid-2">
+        <article class="card panel"><div class="panel-heading"><div><p class="eyebrow">BREAKDOWN</p><h2>カテゴリ別支出</h2></div><select id="monthSelect"><option value="all">全期間</option></select></div><div id="categoryChart" class="bars"></div></article>
+        <article class="card panel"><div class="panel-heading"><div><p class="eyebrow">ASSETS</p><h2>資産推移</h2></div><span id="assetLatest" class="muted">—</span></div><div id="assetChart" class="asset-chart"><p class="muted">資産推移CSVを読み込むと表示されます</p></div></article>
+      </section>
+
+      <section class="card panel"><div class="panel-heading"><div><p class="eyebrow">TRANSACTIONS</p><h2>明細</h2></div><input id="search" class="search" type="search" placeholder="内容・カテゴリを検索"></div><div class="table-wrap"><table><thead><tr><th>日付</th><th>内容</th><th>カテゴリ</th><th class="right">金額</th></tr></thead><tbody id="transactions"></tbody></table></div></section>
+    </div>
+  </main>
+  <footer>ローカル専用 · データはこのブラウザ内で処理されます</footer>
+  <script src="app.js"></script>
+</body>
+</html>
