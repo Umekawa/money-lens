@@ -6,7 +6,7 @@ const demoFiles=[
 const yenFormatter=new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0});
 const yen=n=>yenFormatter.format(n);
 const text=s=>String(s??'').trim();
-function parseAmount(value){let normalized=text(value);if(!normalized)return null;normalized=normalized.replace(/^[¥￥]/,'').replace(/円$/,'').replace(/,/g,'');if(!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized))return null;const amount=Number(normalized);return Number.isFinite(amount)&&Math.abs(amount)<=Number.MAX_SAFE_INTEGER?amount:null}
+function parseAmount(value){let normalized=text(value);if(!normalized)return null;normalized=normalized.replace(/^[¥￥]/,'').replace(/円$/,'');if(!/^[+-]?(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?|\.\d+)$/.test(normalized))return null;const amount=Number(normalized.replace(/,/g,''));return Number.isFinite(amount)&&Math.abs(amount)<=Number.MAX_SAFE_INTEGER?amount:null}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function parseCSV(s){const rows=[];let row=[],cell='',quote=false;for(let i=0;i<s.length;i++){const c=s[i],n=s[i+1];if(c==='"'){if(quote&&n==='"'){cell+='"';i++}else quote=!quote}else if(c===','&&!quote){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quote){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(x=>text(x))){rows.push(row)}row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
 function decode(file){return file.arrayBuffer().then(b=>{const bytes=new Uint8Array(b);try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch{return new TextDecoder('shift-jis').decode(bytes)}})}
