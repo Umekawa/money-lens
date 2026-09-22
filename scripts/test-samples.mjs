@@ -29,7 +29,7 @@ assert(categoryTotals.get("住宅") === 82000 && categoryTotals.get("食費") ==
 assert(state.transactions.reduce((sum, transaction) => sum + transaction.amount, 0) === 165000, "本体の明細金額集計が想定どおりであること");
 
 await context.testApi.load([
-  new File(["2026-02-01,対象外,食費,-999,0\n"], "calculation-target.csv"),
+  new File(["日付,内容,大項目,金額,計算対象\n2026-02-01,対象外,食費,-999,0\n"], "calculation-target.csv"),
 ]);
 assert(state.transactions.length === 4, "計算対象が0の明細を本体が集計対象外にできること");
 
