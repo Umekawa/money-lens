@@ -3,19 +3,17 @@ param(
   [int]$Cycles = 1
 )
 
-$prompt = @"
-このリポジトリの自動開発を1サイクル実行してください。
-
-ルール:
-1. GitHub Issuesの未完了Issueを確認し、最も小さく価値のある1件だけ選ぶ。ghコマンドが使えなければ、既存コードを調査して改善候補を提案する。
-2. 個人CSV、csvs/の内容、秘密情報を読んだり変更したりしない。
-3. 変更範囲を選んだIssueに限定する。
-4. npm run check をローカルで実行し、通らなければ修正してから先へ進む。
-5. チェックが通った場合だけ、変更履歴をCHANGELOG.mdに追記し、git diffを確認する。
-6. git commitは変更が安全で、Issueに対応できた場合だけ行う。コミットメッセージは短くする。
-7. push、Issueのclose、公開設定の変更は自動で行わず、最後に提案として報告する。
-8. 最後に実施内容、テスト結果、次の候補を短く報告する。
-"@
+$prompt = @(
+  'Run one autonomous development cycle for this repository.',
+  '1. Inspect open GitHub Issues and select exactly one small, valuable issue. If gh is unavailable, inspect the code and propose one improvement.',
+  '2. Never read or modify personal CSV files, the csvs directory, or secrets.',
+  '3. Keep the change limited to the selected issue.',
+  '4. Run npm run check locally. Fix failures before continuing.',
+  '5. Only after checks pass, update CHANGELOG.md and inspect git diff.',
+  '6. Commit only safe, issue-related changes. Use a short commit message.',
+  '7. Never push, close Issues, or change repository visibility automatically. Report those as suggestions only.',
+  '8. Report the work done, test result, and next candidate briefly.'
+) -join [Environment]::NewLine
 
 for ($i = 1; $i -le $Cycles; $i++) {
   Write-Host "=== Auto-dev cycle $i/$Cycles ===" -ForegroundColor Cyan
