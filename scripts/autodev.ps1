@@ -4,6 +4,10 @@
   [string]$OpenCodeBin = $env:OPENCODE_BIN,
   [switch]$Continuous,
   [switch]$PublishCurrentChanges,
+  [string]$PublishTitle = '既存変更の整理',
+  [string]$PublishSummary = 'レビュー済みの既存変更を公開します。',
+  [switch]$ListIssues,
+  [string]$IssueBatchPath,
   [ValidateRange(1, 1440)]
   [int]$IntervalMinutes = 10,
   [ValidateRange(1, 3)]
@@ -11,8 +15,14 @@
 )
 
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+if (([int][bool]$ListIssues + [int][bool]$IssueBatchPath + [int][bool]$PublishCurrentChanges) -gt 1) {
+  throw 'Issue一覧取得、一括登録、既存変更の公開は同時に指定できません。'
+}
+if (($ListIssues -or $IssueBatchPath -or $PublishCurrentChanges) -and ($Continuous -or $Cycles -ne 1)) {
+  throw 'Issue専用モードと既存変更の公開は単発で実行してください。'
+}
 $command = if ($OpenCodeBin) { $OpenCodeBin } else { (Get-Command opencode -ErrorAction SilentlyContinue).Source }
-if (-not $command) {
+if (-not $command -and -not $ListIssues -and -not $IssueBatchPath) {
   throw "OpenCode CLI was not found. Install the CLI or set OPENCODE_BIN to its executable path."
 }
 
@@ -27,6 +37,33 @@ if (-not $ghCommand) {
 $repo = (& $ghCommand repo view --json nameWithOwner --jq '.nameWithOwner' 2>$null).Trim()
 if ($LASTEXITCODE -ne 0 -or -not $repo) {
   throw 'The current directory is not an accessible GitHub repository. Check gh auth login and the git remote.'
+}
+
+# 調査・課題登録だけを行う場合は、自動開発サイクルを開始しない。
+if ($ListIssues -or $IssueBatchPath) {
+  $issueJson = & $ghCommand api --paginate --slurp "repos/$repo/issues?state=all&per_page=100"
+  if ($LASTEXITCODE -ne 0) { throw '既存Issueを取得できませんでした。' }
+  $existing = @($issueJson | ConvertFrom-Json | ForEach-Object { $_ } | ForEach-Object { $_ } | Where-Object { -not $_.pull_request })
+  if ($ListIssues) {
+    $existing | Select-Object number, title, state, body, html_url | ConvertTo-Json -Depth 10
+    return
+  }
+  $batch = @(Get-Content -LiteralPath $IssueBatchPath -Raw -Encoding utf8 | ConvertFrom-Json)
+  foreach ($item in $batch) {
+    if (-not $item.title -or -not $item.body) { throw '各Issueにtitleとbodyが必要です。' }
+  }
+  foreach ($item in $batch) {
+    $duplicate = $existing | Where-Object { $_.title -eq $item.title } | Select-Object -First 1
+    if ($duplicate) {
+      Write-Output "既存: $($duplicate.html_url) $($item.title)"
+      continue
+    }
+    $url = & $ghCommand issue create --repo $repo --title $item.title --body $item.body
+    if ($LASTEXITCODE -ne 0) { throw "Issue作成に失敗しました: $($item.title)" }
+    Write-Output "作成: $url $($item.title)"
+    $existing += [pscustomobject]@{ title = $item.title; html_url = $url }
+  }
+  return
 }
 
 $promptBase = @(
@@ -97,7 +134,11 @@ while ($Continuous -or $cycle -lt $Cycles) {
   }
 
   $issue = $null
-  $issueLines = & $ghCommand issue list --repo $repo --state open --limit 20 --json number,title --jq '.[] | [.number, .title] | @tsv'
+  $issueLines = $null
+  if (-not $PublishCurrentChanges) {
+    $issueLines = & $ghCommand issue list --repo $repo --state open --limit 20 --json number,title --jq '.[] | [.number, .title] | @tsv'
+    if ($LASTEXITCODE -ne 0) { throw '開発対象のIssueを取得できませんでした。' }
+  }
   if ($LASTEXITCODE -eq 0 -and $issueLines) {
     $issues = @($issueLines | ForEach-Object {
       $parts = $_ -split "`t", 2
@@ -131,7 +172,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
   if ((git status --porcelain).Length -gt 0) {
     Assert-SafeChanges
     git add -A
-    $commitMessage = if ($issue) { "対応: $($issue.title)" } else { '自動開発: 改善を実装' }
+    $commitMessage = if ($PublishCurrentChanges) { $PublishTitle } elseif ($issue) { "対応: $($issue.title)" } else { '自動開発: 改善を実装' }
     git commit -m $commitMessage
     if ($LASTEXITCODE -ne 0) { throw 'Could not commit changes.' }
   }
@@ -147,8 +188,8 @@ while ($Continuous -or $cycle -lt $Cycles) {
   git push -u origin $branch
   if ($LASTEXITCODE -ne 0) { throw 'Could not push the development branch.' }
 
-  $prTitle = if ($issue) { "対応: $($issue.title)" } else { '自動検出した改善' }
-  if (-not $issue) {
+  $prTitle = if ($PublishCurrentChanges) { $PublishTitle } elseif ($issue) { "対応: $($issue.title)" } else { '自動検出した改善' }
+  if (-not $issue -and -not $PublishCurrentChanges) {
     $discoveryBody = @(
       '## 概要',
       '自動開発サイクルでコードとUIを確認し、実装対象として記録した改善です。',
@@ -165,7 +206,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
 
   $bodyLines = @(
     '## 概要',
-    '自動開発サイクルで実装した変更です。'
+    $(if ($PublishCurrentChanges) { $PublishSummary } else { '自動開発サイクルで実装した変更です。' })
   )
   if ($issue) { $bodyLines += "Closes #$($issue.number)" }
   $bodyLines += @(
