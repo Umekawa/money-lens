@@ -36,6 +36,29 @@ pwsh ./scripts/autodev.ps1 -Continuous -IntervalMinutes 10
 
 ## 開発方針
 
+### 課題調査・一括登録
+
+Issue一覧の取得と課題登録だけを行う場合は、次の専用モードを使います。
+
+```powershell
+pwsh ./scripts/autodev.ps1 -ListIssues
+pwsh ./scripts/autodev.ps1 -IssueBatchPath ./artifacts/issues.json
+```
+
+一括登録ファイルは `[{"title":"課題名","body":"概要・根拠・完了条件"}]` 形式のUTF-8 JSONです。同名の既存Issue（closedを含む）はスキップし、途中失敗後も再実行できます。内容が重複する別タイトルのIssueは登録前に確認してください。このモードには認証済みGitHub CLIが必要です。
+
+既存変更をPRにまとめてレビュー・チェック・マージする場合は、次の単発モードを使います。作業ツリーの変更全体が対象になるため、実行前に `git diff` と `git status` で公開内容を確認してください。既存Issueの自動選択やクローズは行いません。
+
+```powershell
+pwsh ./scripts/autodev.ps1 -PublishCurrentChanges -PublishTitle '調査結果と課題登録の整備' -PublishSummary '調査記録とIssue登録機能を追加します。'
+```
+
+調査記録: [2026-09-23のプロダクト課題](docs/product-audit-2026-09-23.md)。
+
+`docs/` には公開可能な仕様・調査記録を保存してGitで管理します。個人情報や未公開メモは含めず、ローカルだけで残す調査素材はgitignore対象の `artifacts/` に保存してください。gitignoreは登録済みファイルや過去の履歴、公開済みIssueを非公開にはしません。
+
+### 基本方針
+
 - GitHub Issuesを課題管理に使う
 - 個人データ・CSVは公開しない
 - 変更前後にローカルチェックを実行する
