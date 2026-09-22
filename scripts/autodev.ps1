@@ -18,13 +18,13 @@ $ghInstruction = if (Get-Command gh -ErrorAction SilentlyContinue) {
 
 $prompt = @(
   'Run one autonomous development cycle for this repository.',
-  "1. $ghInstruction",
+  "1. $ghInstruction If there are no open Issues, inspect the UI and code and choose one small, clearly useful self-discovered improvement instead of stopping.",
   '2. Never read or modify personal CSV files, the csvs directory, or secrets.',
-  '3. Keep the change limited to the selected issue.',
+  '3. Keep the change limited to the selected issue or self-discovered improvement.',
   '4. Run npm run check locally. Fix failures before continuing.',
-  '5. Only after checks pass, update CHANGELOG.md and inspect git diff.',
-  '6. Commit only safe, issue-related changes. Use a short commit message.',
-  '7. Never push, close Issues, or change repository visibility automatically. Report those as suggestions only.',
+  '5. Only after checks pass, update CHANGELOG.md and inspect git diff. Record self-discovered improvements there too.',
+  '6. Commit only safe, issue-related or self-discovered improvement changes. Use a short commit message.',
+  '7. Do not run gh commands other than gh issue list. Never push, close Issues, or change repository visibility automatically. Report those as suggestions only.',
   '8. Report the work done, test result, and next candidate briefly.'
 ) -join [Environment]::NewLine
 
