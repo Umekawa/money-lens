@@ -38,7 +38,7 @@ for ($i = 1; $i -le $Cycles; $i++) {
   if ($LASTEXITCODE -ne 0) { throw 'Could not fast-forward main.' }
 
   $issue = $null
-  $issueLines = & $ghCommand issue list --repo Umekawa/money-lens --state open --limit 20 --json number,title --jq '.[] | "\(.number)\t\(.title)"'
+  $issueLines = & $ghCommand issue list --repo Umekawa/money-lens --state open --limit 20 --json number,title --jq '.[] | [.number, .title] | @tsv'
   if ($LASTEXITCODE -eq 0 -and $issueLines) {
     $issues = @($issueLines | ForEach-Object {
       $parts = $_ -split "`t", 2
