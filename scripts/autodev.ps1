@@ -199,7 +199,11 @@ while ($Continuous -or $cycle -lt $Cycles) {
       'Issue selection policy: consider all open issues, prioritize P1 over P2 over P3, then lower issue number. Dependency information in the body must be considered before implementation.'
     ) -join [Environment]::NewLine
   } else {
-    'No Issue was selected because this is an existing-changes publication. Do not infer or attach any Issue.'
+    if ($PublishCurrentChanges) {
+      'No Issue was selected because this is an existing-changes publication. Do not infer or attach any Issue.'
+    } else {
+      'There are no open Issues. Find one small improvement from the UI or code and implement it. Do not create or attach an Issue unless the wrapper requests it.'
+    }
   }
 
   $branch = "autodev/$((Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss'))"
