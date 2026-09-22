@@ -30,6 +30,10 @@ function Publish-LocalChanges {
   $script:published++
   $script:dirty = $false
 }
+function Get-PullRequestHeadCommit {
+  param($PullRequestNumber)
+  $script:head
+}
 function Invoke-FakeReview {
   $step = $script:steps[$script:calls]
   if (-not $step) { throw 'レビュー回数が想定を超えました。' }

@@ -123,6 +123,61 @@ function Publish-LocalChanges {
   }
 }
 
+function Get-PullRequestHeadCommit {
+  param([string]$PullRequestNumber)
+  $head = & $ghCommand pr view $PullRequestNumber --repo $repo --json headRefOid --jq '.headRefOid'
+  if ($LASTEXITCODE -ne 0 -or -not $head) { throw "PR #$PullRequestNumber の先端コミットを取得できませんでした。" }
+  return ($head | Out-String).Trim()
+}
+
+function Get-RequiredCheckNames {
+  $contexts = & $ghCommand api "repos/$repo/branches/main/protection/required_status_checks/contexts" --jq '.contexts[]' 2>$null
+  if ($LASTEXITCODE -ne 0) { throw 'mainブランチの必須チェック設定を取得できませんでした。' }
+  $names = @($contexts | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+  if ($names.Count -eq 0) { throw 'mainブランチに必須チェックが登録されていません。' }
+  return @($names | Select-Object -Unique)
+}
+
+function Assert-RequiredChecksPassed {
+  param([string]$PullRequestNumber, [string]$ExpectedHead)
+  $requiredNames = Get-RequiredCheckNames
+  $checksReady = $false
+  for ($attempt = 1; $attempt -le 12; $attempt++) {
+    $actualHead = Get-PullRequestHeadCommit -PullRequestNumber $PullRequestNumber
+    if ($actualHead -ne $ExpectedHead) {
+      throw "必須チェックの待機中にPR #$PullRequestNumber の先端コミットが変わりました。"
+    }
+
+    $checkJson = & $ghCommand pr checks $PullRequestNumber --repo $repo --json name,state 2>$null
+    $checks = @()
+    if ($checkJson) { $checks = @($checkJson | ConvertFrom-Json) }
+    $missing = @($requiredNames | Where-Object {
+        $name = $_
+        -not @($checks | Where-Object { $_.name -eq $name }).Count
+      })
+    if ($missing.Count -eq 0) {
+      $failed = @($requiredNames | Where-Object {
+          $name = $_
+          @($checks | Where-Object { $_.name -eq $name -and $_.state -eq 'SUCCESS' }).Count -eq 0
+        })
+      if ($failed.Count -eq 0) { $checksReady = $true; break }
+      $terminalFailure = @($checks | Where-Object {
+          $_.name -in $requiredNames -and $_.state -in @('FAILURE', 'CANCELLED', 'SKIPPED', 'STARTUP_FAILURE', 'TIMED_OUT', 'ERROR')
+        })
+      if ($terminalFailure.Count -gt 0) {
+        throw "必須チェックが成功していません: $($terminalFailure.name -join ', ')"
+      }
+    }
+    Write-Host 'GitHub Actionsの必須チェックを同じコミットで待っています...' -ForegroundColor Yellow
+    Start-Sleep -Seconds 5
+  }
+  if (-not $checksReady) { throw "PR #$PullRequestNumber の必須チェックが登録されていないか、成功しませんでした。" }
+  $actualHead = Get-PullRequestHeadCommit -PullRequestNumber $PullRequestNumber
+  if ($actualHead -ne $ExpectedHead) {
+    throw "必須チェック完了後にPR #$PullRequestNumber の先端コミットが変わりました。"
+  }
+}
+
 function Get-IssuePriority {
   param($Issue)
   $priorityLabel = @($Issue.labels | ForEach-Object { $_.name }) |
@@ -277,6 +332,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
 
   # Create the PR before review so the reviewer has the exact GitHub context.
   $reviewPassed = $false
+  $reviewedHead = $null
   $reviewLimit = $ReviewAttempts
   for ($reviewAttempt = 1; $reviewAttempt -le $reviewLimit; $reviewAttempt++) {
     $verificationOnly = $reviewAttempt -gt $ReviewAttempts
@@ -313,6 +369,12 @@ while ($Continuous -or $cycle -lt $Cycles) {
       }
       # Also publish commits the reviewer may have created itself.
       Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
+      $reviewedHead = (git rev-parse HEAD).Trim()
+      if ($LASTEXITCODE -ne 0 -or -not $reviewedHead) { throw 'レビュー合格後のコミットを取得できませんでした。' }
+      $publishedHead = Get-PullRequestHeadCommit -PullRequestNumber $prNumber
+      if ($publishedHead -ne $reviewedHead) {
+        throw "レビュー合格後にPR #$prNumber の先端コミットが一致しません。"
+      }
       $reviewPassed = $true
       break
     }
@@ -330,20 +392,8 @@ while ($Continuous -or $cycle -lt $Cycles) {
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed after AI review.' }
 
-  $checksReady = $false
-  for ($attempt = 1; $attempt -le 12; $attempt++) {
-    $checkJson = & $ghCommand pr view $prNumber --repo $repo --json statusCheckRollup
-    if ($LASTEXITCODE -eq 0 -and $checkJson) {
-      $checkData = $checkJson | ConvertFrom-Json
-      if (@($checkData.statusCheckRollup).Count -gt 0) { $checksReady = $true; break }
-    }
-    Write-Host 'GitHub Actionsのチェック登録を待っています...' -ForegroundColor Yellow
-    Start-Sleep -Seconds 5
-  }
-  if (-not $checksReady) { throw "No checks were registered for pull request #$prNumber." }
-  & $ghCommand pr checks $prNumber --repo $repo --watch --interval 5
-  if ($LASTEXITCODE -ne 0) { throw "Pull request checks failed for #$prNumber." }
-  & $ghCommand pr merge $prNumber --repo $repo --squash --delete-branch --subject $prTitle --body '自動開発サイクルで実装。AIレビュー、ローカルチェック、GitHub Actionsを通過。'
+  Assert-RequiredChecksPassed -PullRequestNumber $prNumber -ExpectedHead $reviewedHead
+  & $ghCommand pr merge $prNumber --repo $repo --squash --delete-branch --match-head-commit $reviewedHead --subject $prTitle --body '自動開発サイクルで実装。AIレビュー、ローカルチェック、GitHub Actionsを通過。'
   if ($LASTEXITCODE -ne 0) { throw "Could not merge pull request #$prNumber." }
 
   git switch main
