@@ -9,11 +9,12 @@
 <body>
   <a class="skip-link" href="#main-content">本文へ移動</a>
   <header class="topbar">
-    <div><p class="eyebrow">PERSONAL FINANCE</p><h1>お金ダッシュボード</h1></div>
+    <div><p class="eyebrow">PERSONAL FINANCE</p><h1>お金ダッシュボード <span id="demoBadge" class="demo-badge" hidden>デモモード</span></h1></div>
     <div class="import-actions"><button id="demoData" class="secondary-button" type="button">デモデータを表示</button><label class="secondary-button">csvsフォルダを読み込む<input id="folderInput" type="file" webkitdirectory directory multiple></label><label class="import-button">CSVを追加<input id="fileInput" type="file" accept=".csv,text/csv" multiple></label><button id="clearData" class="secondary-button" type="button" disabled>データをクリア</button></div>
   </header>
 
   <main id="main-content" class="container">
+    <aside id="demoNotice" class="demo-notice" hidden role="status">匿名のサンプルデータを表示しています。公開用デモのためのデータです。</aside>
     <section id="emptyState" class="card empty-state">
       <div class="empty-icon">￥</div>
       <h2>あなたのお金を、見やすく。</h2>
