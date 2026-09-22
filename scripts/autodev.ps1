@@ -4,6 +4,7 @@
   [string]$OpenCodeBin = $env:OPENCODE_BIN,
   [switch]$Continuous,
   [switch]$PublishCurrentChanges,
+  [switch]$ResumePullRequest,
   [string]$PublishTitle = '既存変更の整理',
   [string]$PublishSummary = 'レビュー済みの既存変更を公開します。',
   [switch]$ListIssues,
@@ -15,10 +16,10 @@
 )
 
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-if (([int][bool]$ListIssues + [int][bool]$IssueBatchPath + [int][bool]$PublishCurrentChanges) -gt 1) {
+if (([int][bool]$ListIssues + [int][bool]$IssueBatchPath + [int][bool]$PublishCurrentChanges + [int][bool]$ResumePullRequest) -gt 1) {
   throw 'Issue一覧取得、一括登録、既存変更の公開は同時に指定できません。'
 }
-if (($ListIssues -or $IssueBatchPath -or $PublishCurrentChanges) -and ($Continuous -or $Cycles -ne 1)) {
+if (($ListIssues -or $IssueBatchPath -or $PublishCurrentChanges -or $ResumePullRequest) -and ($Continuous -or $Cycles -ne 1)) {
   throw 'Issue専用モードと既存変更の公開は単発で実行してください。'
 }
 $command = if ($OpenCodeBin) { $OpenCodeBin } else { (Get-Command opencode -ErrorAction SilentlyContinue).Source }
@@ -123,6 +124,24 @@ while ($Continuous -or $cycle -lt $Cycles) {
   $cycleLabel = if ($Continuous) { "$cycle (continuous)" } else { "$cycle/$Cycles" }
   Write-Host "=== Auto-dev cycle $cycleLabel ===" -ForegroundColor Cyan
 
+  if ($ResumePullRequest) {
+    $branch = git branch --show-current
+    if ($LASTEXITCODE -ne 0 -or -not $branch -or $branch -eq 'main') {
+      throw '再開対象のPRブランチに切り替えてください。'
+    }
+    $prJson = & $ghCommand pr view $branch --repo $repo --json number,title,state,headRefName,baseRefName,isCrossRepository
+    if ($LASTEXITCODE -ne 0) { throw '再開対象のPRを取得できませんでした。' }
+    $pr = $prJson | ConvertFrom-Json
+    if ($pr.state -ne 'OPEN' -or $pr.headRefName -ne $branch -or $pr.baseRefName -ne 'main' -or $pr.isCrossRepository) {
+      throw '同一リポジトリのmain向け未マージPRのみ再開できます。'
+    }
+    $prNumber = $pr.number
+    $prTitle = $pr.title
+    npm run check
+    if ($LASTEXITCODE -ne 0) { throw '再開前のローカルチェックに失敗しました。' }
+    Publish-LocalChanges -Branch $branch -CommitMessage '自動レビューの最終確認とPR再開を改善'
+    Write-Host "PR #$prNumber のレビューから再開します。" -ForegroundColor Cyan
+  } else {
   if ($PublishCurrentChanges) {
     if ((git status --porcelain).Length -eq 0) { throw 'There are no current changes to publish.' }
   } else {
@@ -220,21 +239,43 @@ while ($Continuous -or $cycle -lt $Cycles) {
   if ($LASTEXITCODE -ne 0) { throw 'Could not create the pull request.' }
   $prNumber = [regex]::Match(($prUrl -join "`n"), '/pull/(\d+)').Groups[1].Value
   if (-not $prNumber) { throw 'Could not determine the pull request number.' }
+  }
 
   # Create the PR before review so the reviewer has the exact GitHub context.
   $reviewPassed = $false
-  for ($reviewAttempt = 1; $reviewAttempt -le $ReviewAttempts; $reviewAttempt++) {
-    Write-Host "AIレビュー $reviewAttempt/$ReviewAttempts..." -ForegroundColor Magenta
-    $reviewOutput = & $command run ((@($reviewPrompt) + "PR: https://github.com/$repo/pull/$prNumber") -join [Environment]::NewLine) 2>&1 | Out-String
+  $reviewLimit = $ReviewAttempts
+  for ($reviewAttempt = 1; $reviewAttempt -le $reviewLimit; $reviewAttempt++) {
+    $verificationOnly = $reviewAttempt -gt $ReviewAttempts
+    $currentReviewPrompt = if ($verificationOnly) {
+      @($reviewPrompt | Where-Object { $_ -notlike 'Fix any concrete*' }) + @(
+        'This is the final verification of published fixes. Do not modify any files or create commits.',
+        'If any concrete problem remains, report it with REVIEW_FAIL. Otherwise finish with REVIEW_PASS.'
+      )
+    } else { $reviewPrompt }
+    Write-Host "AIレビュー $reviewAttempt/$reviewLimit$(if ($verificationOnly) { '（変更禁止の最終確認）' })..." -ForegroundColor Magenta
+    $reviewHead = git rev-parse HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'レビュー前のコミットを取得できませんでした。' }
+    $reviewOutput = & $command run ((@($currentReviewPrompt) + "PR: https://github.com/$repo/pull/$prNumber") -join [Environment]::NewLine) 2>&1 | Out-String
     $reviewExitCode = $LASTEXITCODE
     Write-Host $reviewOutput
+    $headAfterReview = git rev-parse HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'レビュー後のコミットを取得できませんでした。' }
+    $reviewChanged = (git status --porcelain).Length -gt 0 -or $reviewHead -ne $headAfterReview
+    if ($verificationOnly -and $reviewChanged) {
+      throw "最終確認レビューで変更が発生しました。PR #$prNumber はマージせず、調査のため停止します。"
+    }
     if ($reviewExitCode -eq 0 -and $reviewOutput -match '(?m)^\s*REVIEW_PASS\s*$') {
       # A reviewer may have left a fix uncommitted. Publish it and require a
       # fresh review so that code added after the pass is never merged unseen.
-      if ((git status --porcelain).Length -gt 0) {
+      if ($reviewChanged) {
+        npm run check
+        if ($LASTEXITCODE -ne 0) { throw 'レビュー修正後のローカルチェックに失敗しました。' }
         Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
-        if ($reviewAttempt -lt $ReviewAttempts) { continue }
-        throw 'The final AI review left changes that require another review.'
+        if ($reviewAttempt -eq $ReviewAttempts) {
+          $reviewLimit++
+          Write-Host '最終レビューの修正を公開しました。変更禁止の確認レビューを追加します。' -ForegroundColor Yellow
+        }
+        continue
       }
       # Also publish commits the reviewer may have created itself.
       Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
