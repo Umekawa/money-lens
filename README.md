@@ -23,4 +23,12 @@ npm run check
 - GitHub Issuesを課題管理に使う
 - 個人データ・CSVは公開しない
 - 変更前後にローカルチェックを実行する
-- GitHub Actionsは `.github/workflows/check.yml` の1本だけにする
+- GitHub ActionsはチェックとGitHub Pagesデプロイの最小構成にする
+
+## 公開デモ
+
+GitHub Pages には `main` ブランチへの更新時に自動デプロイされます。公開先では個人CSVを読み込まず、匿名のデモデータを表示します。
+
+リポジトリの **Settings → Pages** で Source を **GitHub Actions** に設定してください。公開後は次のURLでデモを確認できます（`<owner>` と `<repository>` は置き換えてください）。
+
+<https://<owner>.github.io/<repository>/>
