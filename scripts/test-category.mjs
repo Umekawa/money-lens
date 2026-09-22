@@ -3,7 +3,7 @@ import vm from "node:vm";
 
 const source = await readFile("app.js", "utf8");
 const context = { File, Map, Math };
-vm.runInNewContext(`${source}\n;globalThis.categorySums = categorySums;`, context);
+vm.runInNewContext(`${source}\n;globalThis.categorySums = categorySums; globalThis.categoryDisplayData = categoryDisplayData;`, context);
 
 const result = context.categorySums([
   { category: "__proto__", amount: -100 },
@@ -25,3 +25,20 @@ if (result.size !== expected.size || [...expected].some(([key, value]) => result
 }
 
 console.log("Category aggregation checks passed.");
+
+const makeTransactions = count => Array.from({ length: count }, (_, index) => ({
+  category: `カテゴリ${index + 1}`,
+  amount: -(count - index),
+}));
+for (const count of [0, 8, 9]) {
+  const display = context.categoryDisplayData(makeTransactions(count));
+  const displayedTotal = display.reduce((sum, [, value]) => sum + value, 0);
+  const expectedTotal = count * (count + 1) / 2;
+  if (displayedTotal !== expectedTotal || display.length !== (count === 9 ? 9 : count)) {
+    throw new Error(`${count}カテゴリの表示合計が想定と異なります`);
+  }
+}
+if (context.categoryDisplayData(makeTransactions(9)).at(-1)[0] !== "その他") {
+  throw new Error("9カテゴリ以上の残額が「その他」に集約されていません");
+}
+console.log("Category display checks passed.");
