@@ -18,6 +18,11 @@ if (!context.appState.demo || context.appState.transactions.length !== 7 || cont
   throw new Error("デモデータが通常データと混在しています");
 }
 
+await context.loadData([]);
+if (!context.appState.demo || context.appState.transactions.length !== 7 || context.appState.assets.length !== 2) {
+  throw new Error("空のファイル選択でデモデータが消えています");
+}
+
 await context.loadData([userFile]);
 if (context.appState.demo || context.appState.transactions.length !== 1 || context.appState.assets.length !== 0) {
   throw new Error("通常データへの切り替えでデモデータが残っています");
