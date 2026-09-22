@@ -50,6 +50,36 @@ $reviewPrompt = @(
   'If you cannot fix a concrete problem, finish with exactly REVIEW_FAIL and explain the remaining problem.'
 )
 
+function Assert-SafeChanges {
+  $unsafe = @(git status --porcelain=v1 | ForEach-Object {
+      if ($_.Length -lt 4) { return }
+      $path = $_.Substring(3).Trim('"').Replace('\', '/')
+      if ($path -match '(^|/)csvs(/|$)' -or
+          ($path -match '\.csv$' -and $path -notmatch '^samples/') -or
+          $path -match '(^|/)(\.env($|\.)|.*(secret|credential).*)' -or
+          $path -match '\.(pem|key)$') { $path }
+    })
+  if ($unsafe.Count -gt 0) {
+    throw "Refusing to stage personal CSV or secret-looking files: $($unsafe -join ', ')"
+  }
+}
+
+function Publish-LocalChanges {
+  param([string]$Branch, [string]$CommitMessage)
+  Assert-SafeChanges
+  if ((git status --porcelain).Length -gt 0) {
+    git add -A
+    if ($LASTEXITCODE -ne 0) { throw 'Could not stage changes.' }
+    git commit -m $CommitMessage
+    if ($LASTEXITCODE -ne 0) { throw 'Could not commit changes.' }
+  }
+  $ahead = [int](git rev-list --count "origin/$Branch..HEAD")
+  if ($ahead -gt 0) {
+    git push -u origin $Branch
+    if ($LASTEXITCODE -ne 0) { throw 'Could not push changes.' }
+  }
+}
+
 $cycle = 0
 while ($Continuous -or $cycle -lt $Cycles) {
   $cycle++
@@ -99,6 +129,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed. The branch was left for investigation.' }
 
   if ((git status --porcelain).Length -gt 0) {
+    Assert-SafeChanges
     git add -A
     $commitMessage = if ($issue) { "対応: $($issue.title)" } else { '自動開発: 改善を実装' }
     git commit -m $commitMessage
@@ -154,20 +185,24 @@ while ($Continuous -or $cycle -lt $Cycles) {
   for ($reviewAttempt = 1; $reviewAttempt -le $ReviewAttempts; $reviewAttempt++) {
     Write-Host "AIレビュー $reviewAttempt/$ReviewAttempts..." -ForegroundColor Magenta
     $reviewOutput = & $command run ((@($reviewPrompt) + "PR: https://github.com/$repo/pull/$prNumber") -join [Environment]::NewLine) 2>&1 | Out-String
+    $reviewExitCode = $LASTEXITCODE
     Write-Host $reviewOutput
-    if ($reviewOutput -match 'REVIEW_PASS') {
+    if ($reviewExitCode -eq 0 -and $reviewOutput -match '(?m)^\s*REVIEW_PASS\s*$') {
+      # A reviewer may have left a fix uncommitted. Publish it and require a
+      # fresh review so that code added after the pass is never merged unseen.
+      if ((git status --porcelain).Length -gt 0) {
+        Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
+        if ($reviewAttempt -lt $ReviewAttempts) { continue }
+        throw 'The final AI review left changes that require another review.'
+      }
+      # Also publish commits the reviewer may have created itself.
+      Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
       $reviewPassed = $true
       break
     }
     if ($reviewAttempt -lt $ReviewAttempts) {
       Write-Host 'レビューで問題が見つかったため、修正後に再レビューします。' -ForegroundColor Yellow
-      if ((git status --porcelain).Length -gt 0) {
-        git add -A
-        git commit -m 'レビュー指摘を反映'
-        if ($LASTEXITCODE -ne 0) { throw 'Could not commit review fixes.' }
-        git push
-        if ($LASTEXITCODE -ne 0) { throw 'Could not push review fixes.' }
-      }
+      Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'
     }
   }
   if (-not $reviewPassed) {
@@ -175,14 +210,6 @@ while ($Continuous -or $cycle -lt $Cycles) {
   }
   & $ghCommand pr comment $prNumber --repo $repo --body 'AIレビュー: REVIEW_PASS。ローカルチェックとGitHub Actionsの完了を待ってマージします。'
   if ($LASTEXITCODE -ne 0) { throw 'Could not add the AI review comment.' }
-
-  if ((git status --porcelain).Length -gt 0) {
-    git add -A
-    git commit -m 'レビュー指摘を反映'
-    if ($LASTEXITCODE -ne 0) { throw 'Could not commit review fixes.' }
-    git push
-    if ($LASTEXITCODE -ne 0) { throw 'Could not push review fixes.' }
-  }
 
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed after AI review.' }
