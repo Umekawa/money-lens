@@ -1,4 +1,4 @@
-param(
+﻿param(
   [ValidateRange(1, 10)]
   [int]$Cycles = 1,
   [string]$OpenCodeBin = $env:OPENCODE_BIN
@@ -81,7 +81,7 @@ for ($i = 1; $i -le $Cycles; $i++) {
   $bodyLines += @(
     '',
     '## 確認内容',
-    '- ローカルで `npm run check` が成功',
+    '- ローカルで npm run check が成功',
     '- 個人CSVや個人情報はコミットしていません'
   )
   $body = $bodyLines -join [Environment]::NewLine
