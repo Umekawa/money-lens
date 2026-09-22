@@ -55,4 +55,32 @@ for (const totalHeader of ["合計", "総額", "純資産", "総資産", "残高
   }
 }
 
+for (const unit of ["（円）", "(円)"]) {
+  const isolated = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
+  vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state;`, isolated);
+  const headers = ["日付", ...["合計", "預金・現金", "株式(現物)", "投資信託", "年金", "ポイント"].map(label => label + unit)];
+  await isolated.loadFiles([new File([
+    headers.map(label => `"${label}"`).join(",") + '\n"2026/6/30","1,500","100","200","300","400","500"\n',
+  ], "unit-headers.csv")]);
+  const asset = isolated.importState.assets[0];
+  if (isolated.importState.assets.length !== 1 || asset.total !== 1500 ||
+      asset.breakdown.map(item => item.value).join(",") !== "100,200,300,400,500" ||
+      asset.breakdown[1].label !== `株式(現物)${unit}` || isolated.importState.importMessages.length !== 0) {
+    throw new Error("単位付き合計列の認識、内訳の読み込み、元の表示名の保持に失敗しました");
+  }
+}
+
+// 架空の「日付,合計（円）,預金・現金（円）」CSVをCP932で符号化したもの。
+const shiftJisContext = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
+vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state;`, shiftJisContext);
+await shiftJisContext.loadFiles([new File([
+  Buffer.from("93fa95742c8d878c768169897e816a2c97618be081458cbb8be08169897e816a0a323032362f362f33302c3130302c3130300a", "hex"),
+], "shift-jis.csv")]);
+if (shiftJisContext.importState.assets.length !== 1 ||
+    shiftJisContext.importState.assets[0].total !== 100 ||
+    shiftJisContext.importState.assets[0].breakdown[0].label !== "預金・現金（円）" ||
+    shiftJisContext.importState.importMessages.length !== 0) {
+  throw new Error("Shift_JISの単位付き資産CSVを読み込めません");
+}
+
 console.log("Asset schema checks passed.");

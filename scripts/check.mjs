@@ -24,4 +24,6 @@ execFileSync(process.execPath, ["scripts/test-import-amount.mjs"], { stdio: "inh
 execFileSync(process.execPath, ["scripts/test-import-date.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-assets-schema.mjs"], { stdio: "inherit" });
 
+execFileSync(process.execPath, ["scripts/test-file-startup.mjs"], { stdio: "inherit" });
+
 console.log("Local checks passed.");
