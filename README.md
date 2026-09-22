@@ -7,7 +7,7 @@
 個人CSVは `csvs/` に置けますが、Gitには登録されません。
 
 ```powershell
-python -m http.server 8765
+python -m http.server 8765 --bind 127.0.0.1
 ```
 
 ブラウザで <http://localhost:8765> を開きます。
