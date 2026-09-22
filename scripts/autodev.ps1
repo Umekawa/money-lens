@@ -74,18 +74,18 @@ for ($i = 1; $i -le $Cycles; $i++) {
   if ($LASTEXITCODE -ne 0) { throw 'Could not push the development branch.' }
 
   $bodyLines = @(
-    '## 概要',
-    '自動開発サイクルで実装した変更です。'
+    '## Summary',
+    'Implemented by the autonomous development cycle.'
   )
   if ($issue) { $bodyLines += "Closes #$($issue.number)" }
   $bodyLines += @(
     '',
-    '## 確認内容',
-    '- ローカルで `npm run check` が成功',
-    '- 個人CSVや個人情報はコミットしていません'
+    '## Verification',
+    '- npm run check passed locally',
+    '- No personal CSV or account data was committed'
   )
   $body = $bodyLines -join [Environment]::NewLine
-  $prTitle = if ($issue) { "対応: $($issue.title)" } else { '自動検出した改善' }
+  $prTitle = if ($issue) { "Fix: $($issue.title)" } else { 'Autonomous improvement' }
   $prUrl = & $ghCommand pr create --repo Umekawa/money-lens --base main --head $branch --title $prTitle --body $body
   if ($LASTEXITCODE -ne 0) { throw 'Could not create the pull request.' }
   $prNumber = [regex]::Match(($prUrl -join "`n"), '/pull/(\d+)').Groups[1].Value
@@ -93,7 +93,7 @@ for ($i = 1; $i -le $Cycles; $i++) {
 
   & $ghCommand pr checks $prNumber --repo Umekawa/money-lens --watch --interval 5
   if ($LASTEXITCODE -ne 0) { throw "Pull request checks failed for #$prNumber." }
-  & $ghCommand pr merge $prNumber --repo Umekawa/money-lens --squash --delete-branch --subject $prTitle --body '自動開発サイクルで実装。ローカルチェックとGitHub Actionsを通過。'
+  & $ghCommand pr merge $prNumber --repo Umekawa/money-lens --squash --delete-branch --subject $prTitle --body 'Implemented by autonomous development. Local checks and GitHub Actions passed.'
   if ($LASTEXITCODE -ne 0) { throw "Could not merge pull request #$prNumber." }
 
   git switch main
