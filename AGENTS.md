@@ -1,0 +1,6 @@
+# 開発ルール
+
+- `csvs/`と個人CSVは読まない・変更しない・コミットしない。
+- 変更後は必ず`npm run check`をローカルで実行する。
+- 変更内容は`CHANGELOG.md`に短く記録する。
+- GitHubへのpush、PR作成、マージ、Issue操作は`autodev.ps1`が行う。
