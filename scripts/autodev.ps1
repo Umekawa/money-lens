@@ -131,8 +131,16 @@ function Get-PullRequestHeadCommit {
 }
 
 function Get-RequiredCheckNames {
-  $contexts = & $ghCommand api "repos/$repo/branches/main/protection/required_status_checks/contexts" --jq '.contexts[]' 2>$null
+  $contextJson = & $ghCommand api "repos/$repo/branches/main/protection/required_status_checks/contexts" 2>$null
   if ($LASTEXITCODE -ne 0) { throw 'mainブランチの必須チェック設定を取得できませんでした。' }
+  try {
+    $contextData = $contextJson | ConvertFrom-Json
+  } catch {
+    throw 'mainブランチの必須チェック設定を解析できませんでした。'
+  }
+  # GitHub API returns a string array for this endpoint. Keep accepting the
+  # object form as well for GitHub Enterprise/API compatibility.
+  $contexts = if ($contextData -is [array]) { @($contextData) } else { @($contextData.contexts) }
   $names = @($contexts | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
   if ($names.Count -eq 0) { throw 'mainブランチに必須チェックが登録されていません。' }
   return @($names | Select-Object -Unique)
