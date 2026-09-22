@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "ui:audit": "node scripts/ui-audit.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
