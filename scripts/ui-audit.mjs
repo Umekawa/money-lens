@@ -6,7 +6,7 @@ const port = 8765;
 const baseUrl = `http://127.0.0.1:${port}/?demo=1`;
 const createIssue = process.argv.includes("--create-issue");
 const gh = process.env.GH_BIN || (process.platform === "win32" ? "C:\\Program Files\\GitHub CLI\\gh.exe" : "gh");
-const server = spawn("python", ["-m", "http.server", String(port)], { stdio: "ignore", windowsHide: true });
+const server = spawn("python", ["-m", "http.server", String(port), "--bind", "127.0.0.1"], { stdio: "ignore", windowsHide: true });
 
 const waitForServer = async () => {
   for (let attempt = 0; attempt < 30; attempt += 1) {
