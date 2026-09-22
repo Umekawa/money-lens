@@ -17,5 +17,6 @@ const trackedCsv = execFileSync("git", ["ls-files", "*.csv"], { encoding: "utf8"
 if (trackedCsv.length) throw new Error(`Personal CSV is tracked by git: ${trackedCsv.join(", ")}`);
 
 execFileSync(process.execPath, ["scripts/test-samples.mjs"], { stdio: "inherit" });
+execFileSync(process.execPath, ["scripts/test-category.mjs"], { stdio: "inherit" });
 
 console.log("Local checks passed.");
