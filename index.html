@@ -10,11 +10,16 @@
   <a class="skip-link" href="#main-content">本文へ移動</a>
   <header class="topbar">
     <div><p class="eyebrow">PERSONAL FINANCE</p><h1>お金ダッシュボード <span id="demoBadge" class="demo-badge" hidden>デモモード</span></h1></div>
-    <div class="import-actions"><button id="demoData" class="secondary-button" type="button">デモデータを表示</button><label class="secondary-button">csvsフォルダを読み込む<input id="folderInput" type="file" webkitdirectory directory multiple></label><label class="import-button">CSVを追加<input id="fileInput" type="file" accept=".csv,text/csv" multiple></label><button id="clearData" class="secondary-button" type="button" disabled>データをクリア</button></div>
+    <div class="import-actions"><button id="demoData" class="secondary-button" type="button">デモデータを表示</button><button id="runUiAudit" class="secondary-button" type="button">UIを評価</button><label class="secondary-button">csvsフォルダを読み込む<input id="folderInput" type="file" webkitdirectory directory multiple></label><label class="import-button">CSVを追加<input id="fileInput" type="file" accept=".csv,text/csv" multiple></label><button id="clearData" class="secondary-button" type="button" disabled>データをクリア</button></div>
   </header>
 
   <main id="main-content" class="container">
     <aside id="demoNotice" class="demo-notice" hidden role="status">匿名のサンプルデータを表示しています。公開用デモのためのデータです。</aside>
+    <section id="uiAuditPanel" class="card ui-audit" hidden aria-labelledby="uiAuditTitle">
+      <div class="panel-heading"><div><p class="eyebrow">UI AUDIT</p><h2 id="uiAuditTitle">ブラウザUIの自動評価</h2></div><button id="copyUiAudit" class="secondary-button" type="button" disabled>Issue候補をコピー</button></div>
+      <p id="uiAuditSummary" class="muted" aria-live="polite">評価を実行すると、画面上で確認できるIssue候補を表示します。</p>
+      <ul id="uiAuditResults" class="ui-audit-results"></ul>
+    </section>
     <section id="emptyState" class="card empty-state">
       <div class="empty-icon">￥</div>
       <h2>あなたのお金を、見やすく。</h2>
