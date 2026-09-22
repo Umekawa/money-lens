@@ -18,6 +18,8 @@ python -m http.server 8765
 npm run check
 ```
 
+ブラウザUIの操作監査（匿名デモのみ）は [`docs/browser-ui-audit.md`](docs/browser-ui-audit.md) を参照してください。
+
 ## 開発方針
 
 - GitHub Issuesを課題管理に使う
