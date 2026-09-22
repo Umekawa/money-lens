@@ -39,7 +39,10 @@ for ($i = 1; $i -le $Cycles; $i++) {
 
   $issue = $null
   $issueJson = & $ghCommand issue list --repo Umekawa/money-lens --state open --limit 20 --json number,title
-  if ($LASTEXITCODE -eq 0 -and $issueJson) { $issue = ($issueJson | ConvertFrom-Json | Select-Object -First 1) }
+  if ($LASTEXITCODE -eq 0 -and $issueJson) {
+    $issues = @($issueJson | ConvertFrom-Json | Sort-Object number)
+    if ($issues.Count -gt 0) { $issue = $issues[0] }
+  }
   $issueInstruction = if ($issue) {
     "Work on GitHub Issue #$($issue.number): $($issue.title)."
   } else {
@@ -91,6 +94,17 @@ for ($i = 1; $i -le $Cycles; $i++) {
   $prNumber = [regex]::Match(($prUrl -join "`n"), '/pull/(\d+)').Groups[1].Value
   if (-not $prNumber) { throw 'Could not determine the pull request number.' }
 
+  $checksReady = $false
+  for ($attempt = 1; $attempt -le 12; $attempt++) {
+    $checkJson = & $ghCommand pr view $prNumber --repo Umekawa/money-lens --json statusCheckRollup
+    if ($LASTEXITCODE -eq 0 -and $checkJson) {
+      $checkData = $checkJson | ConvertFrom-Json
+      if (@($checkData.statusCheckRollup).Count -gt 0) { $checksReady = $true; break }
+    }
+    Write-Host 'GitHub Actionsのチェック登録を待っています...' -ForegroundColor Yellow
+    Start-Sleep -Seconds 5
+  }
+  if (-not $checksReady) { throw "No checks were registered for pull request #$prNumber." }
   & $ghCommand pr checks $prNumber --repo Umekawa/money-lens --watch --interval 5
   if ($LASTEXITCODE -ne 0) { throw "Pull request checks failed for #$prNumber." }
   & $ghCommand pr merge $prNumber --repo Umekawa/money-lens --squash --delete-branch --subject $prTitle --body '自動開発サイクルで実装。ローカルチェックとGitHub Actionsを通過。'
