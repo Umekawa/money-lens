@@ -38,13 +38,18 @@ for ($i = 1; $i -le $Cycles; $i++) {
   if ($LASTEXITCODE -ne 0) { throw 'Could not fast-forward main.' }
 
   $issue = $null
-  $issueJson = & $ghCommand issue list --repo Umekawa/money-lens --state open --limit 20 --json number,title
-  if ($LASTEXITCODE -eq 0 -and $issueJson) {
-    $issues = @($issueJson | ConvertFrom-Json | Sort-Object number)
+  $issueLines = & $ghCommand issue list --repo Umekawa/money-lens --state open --limit 20 --json number,title --jq '.[] | "\(.number)\t\(.title)"'
+  if ($LASTEXITCODE -eq 0 -and $issueLines) {
+    $issues = @($issueLines | ForEach-Object {
+      $parts = $_ -split "`t", 2
+      if ($parts.Count -eq 2) {
+        [pscustomobject]@{ number = [int]$parts[0]; title = $parts[1] }
+      }
+    } | Sort-Object number)
     if ($issues.Count -gt 0) { $issue = $issues[0] }
   }
   $issueInstruction = if ($issue) {
-    "Work on GitHub Issue #$($issue.number): $($issue.title)."
+    "You MUST work only on GitHub Issue #$($issue.number): $($issue.title). Do not select a different Issue."
   } else {
     'There are no open Issues. Find one small improvement from the UI or code and implement it.'
   }
