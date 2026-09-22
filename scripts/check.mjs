@@ -18,5 +18,6 @@ if (trackedCsv.length) throw new Error(`Personal CSV is tracked by git: ${tracke
 
 execFileSync(process.execPath, ["scripts/test-samples.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-category.mjs"], { stdio: "inherit" });
+execFileSync(process.execPath, ["scripts/test-import-merge.mjs"], { stdio: "inherit" });
 
 console.log("Local checks passed.");
