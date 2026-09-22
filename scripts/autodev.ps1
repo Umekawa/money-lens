@@ -62,7 +62,8 @@ for ($i = 1; $i -le $Cycles; $i++) {
 
   if ((git status --porcelain).Length -gt 0) {
     git add -A
-    git commit -m 'feat: improve money-lens'
+    $commitMessage = if ($issue) { "対応: $($issue.title)" } else { '自動開発: 改善を実装' }
+    git commit -m $commitMessage
     if ($LASTEXITCODE -ne 0) { throw 'Could not commit changes.' }
   }
 
