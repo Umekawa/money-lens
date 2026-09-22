@@ -143,9 +143,10 @@ function Get-SelectedIssue {
     return $selected
   }
 
-  $issueJson = & $ghCommand issue list --repo $repo --state open --limit 1000 --json number,title,body,labels
+  $issueJson = & $ghCommand api --paginate --slurp "repos/$repo/issues?state=open&per_page=100"
   if ($LASTEXITCODE -ne 0) { throw '開発対象のIssueを取得できませんでした。' }
-  $issues = @($issueJson | ConvertFrom-Json)
+  $issuePages = @($issueJson | ConvertFrom-Json)
+  $issues = @($issuePages | ForEach-Object { $_ } | Where-Object { -not $_.pull_request })
   return $issues |
     Sort-Object @{ Expression = { Get-IssuePriority $_ } }, number |
     Select-Object -First 1
