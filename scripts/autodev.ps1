@@ -1,7 +1,13 @@
 param(
   [ValidateRange(1, 10)]
-  [int]$Cycles = 1
+  [int]$Cycles = 1,
+  [string]$OpenCodeBin = $env:OPENCODE_BIN
 )
+
+$command = if ($OpenCodeBin) { $OpenCodeBin } else { (Get-Command opencode -ErrorAction SilentlyContinue).Source }
+if (-not $command) {
+  throw "OpenCode CLI was not found. Install the CLI or set OPENCODE_BIN to its executable path. Example: `$env:OPENCODE_BIN = 'C:\path\to\opencode.exe'"
+}
 
 $prompt = @(
   'Run one autonomous development cycle for this repository.',
@@ -17,7 +23,7 @@ $prompt = @(
 
 for ($i = 1; $i -le $Cycles; $i++) {
   Write-Host "=== Auto-dev cycle $i/$Cycles ===" -ForegroundColor Cyan
-  opencode run $prompt
+  & $command run $prompt
   if ($LASTEXITCODE -ne 0) {
     throw "OpenCode exited with code $LASTEXITCODE"
   }
