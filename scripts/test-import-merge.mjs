@@ -13,6 +13,12 @@ if (mergedTransactions.length !== 3 || mergedTransactions[2] !== added) {
   throw new Error("明細の期間重複を除外しつつ正当な同日同額の重複を保持できません");
 }
 
+const nulInContent = { date: "2026-03-01", content: "店\0支店A", category: "食費", amount: -300 };
+const nulCollision = { date: "2026-03-01", content: "店", category: "支店A\0食費", amount: -300 };
+if (context.mergeTransactions([nulInContent], [nulCollision]).length !== 2) {
+  throw new Error("NUL文字を含む異なる明細を重複排除しません");
+}
+
 const oldAsset = { date: "2026-01-31", total: 100, breakdown: [] };
 const updatedAsset = { date: "2026-01-31", total: 200, breakdown: [] };
 const nextAsset = { date: "2026-02-28", total: 300, breakdown: [] };
