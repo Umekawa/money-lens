@@ -9,7 +9,8 @@ if (context.classifyHeaders(["日付", "普通預金", "投資信託", "合計"]
     context.classifyHeaders(["合計", "資産内訳", "日付"]) !== "assets" ||
     context.classifyHeaders(["日 付", "普通 預金", "投資信託", "資産 合計"]) !== "assets" ||
     context.classifyHeaders(["取引日付", "普通預金", "合計"]) !== "assets" ||
-    context.classifyHeaders(["日付", "資産区分", "金額"]) !== "transactions") {
+    context.classifyHeaders(["日付", "資産区分", "金額"]) !== "transactions" ||
+    context.classifyHeaders(["日付", "資産区分", "支出金額"]) !== "transactions") {
   throw new Error("ファイル名や列順を変えた資産CSVを判定できません");
 }
 
