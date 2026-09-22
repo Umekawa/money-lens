@@ -6,8 +6,18 @@ const context = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
 vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state; globalThis.classifyHeaders = classify;`, context);
 
 if (context.classifyHeaders(["日付", "普通預金", "投資信託", "合計"]) !== "assets" ||
-    context.classifyHeaders(["合計", "資産内訳", "日付"]) !== "assets") {
+    context.classifyHeaders(["合計", "資産内訳", "日付"]) !== "assets" ||
+    context.classifyHeaders(["日 付", "普通 預金", "投資信託", "資産 合計"]) !== "assets") {
   throw new Error("ファイル名や列順を変えた資産CSVを判定できません");
+}
+
+const spacedHeaders = new File([
+  "日 付,資産 内訳,普通 預金,資産 合計\n" +
+  "2026-06-30,100,200,300\n",
+], "空白付き.csv");
+await context.loadFiles([spacedHeaders]);
+if (context.importState.assets.length !== 1 || context.importState.assets[0].total !== 300) {
+  throw new Error("空白を含む資産ヘッダーを読み込めません");
 }
 
 const reordered = new File([
