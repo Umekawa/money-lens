@@ -10,7 +10,7 @@
   <a class="skip-link" href="#main-content">本文へ移動</a>
   <header class="topbar">
     <div><p class="eyebrow">PERSONAL FINANCE</p><h1>お金ダッシュボード</h1></div>
-    <div class="import-actions"><label class="secondary-button">csvsフォルダを読み込む<input id="folderInput" type="file" webkitdirectory directory multiple></label><label class="import-button">CSVを追加<input id="fileInput" type="file" accept=".csv,text/csv" multiple></label><button id="clearData" class="secondary-button" type="button" disabled>データをクリア</button></div>
+    <div class="import-actions"><button id="demoData" class="secondary-button" type="button">デモデータを表示</button><label class="secondary-button">csvsフォルダを読み込む<input id="folderInput" type="file" webkitdirectory directory multiple></label><label class="import-button">CSVを追加<input id="fileInput" type="file" accept=".csv,text/csv" multiple></label><button id="clearData" class="secondary-button" type="button" disabled>データをクリア</button></div>
   </header>
 
   <main id="main-content" class="container">
@@ -18,7 +18,7 @@
       <div class="empty-icon">￥</div>
       <h2>あなたのお金を、見やすく。</h2>
       <p>マネーフォワードのCSVを読み込むと、支出・収支・資産の推移をこのブラウザ内だけで分析できます。</p>
-      <div class="import-actions center"><label class="primary-button">CSVを選択<input id="emptyFileInput" type="file" accept=".csv,text/csv" multiple></label><label class="secondary-button">フォルダを選択<input id="emptyFolderInput" type="file" webkitdirectory directory multiple></label></div>
+      <div class="import-actions center"><button id="emptyDemoData" class="secondary-button" type="button">匿名のデモデータを見る</button><label class="primary-button">CSVを選択<input id="emptyFileInput" type="file" accept=".csv,text/csv" multiple></label><label class="secondary-button">フォルダを選択<input id="emptyFolderInput" type="file" webkitdirectory directory multiple></label></div>
       <small>データは外部へ送信されません。Shift_JISのCSVにも対応しています。</small>
     </section>
 
