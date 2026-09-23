@@ -100,6 +100,7 @@ function Assert-SafeChanges {
       if ($_.Length -lt 4) { return }
       $path = $_.Substring(3).Trim('"').Replace('\', '/')
       if ($path -match '(^|/)csvs(/|$)' -or
+          $path -match '(^|/)csv-manifest\.json$' -or
           ($path -match '\.csv$' -and $path -notmatch '^samples/') -or
           $path -match '(^|/)(\.env($|\.)|.*(secret|credential).*)' -or
           $path -match '\.(pem|key)$') { $path }
