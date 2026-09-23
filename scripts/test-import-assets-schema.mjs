@@ -33,6 +33,23 @@ if (context.importState.assets.length !== 1 || context.importState.assets[0].tot
   throw new Error("明確な資産合計列を選択できません");
 }
 
+const repeatedContext = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
+vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state;`, repeatedContext);
+const assetA = new File(["日付,普通預金,合計\n2026-01-31,100,100\n2026-02-28,150,150\n"], "a.csv");
+const assetB = new File(["日付,普通預金,合計\n2026-01-31,200,200\n2026-02-28,250,250\n"], "b.csv");
+await repeatedContext.loadFiles([assetA]);
+await repeatedContext.loadFiles([assetB]);
+await repeatedContext.loadFiles([assetA]);
+const finalAssets = repeatedContext.importState.assets;
+if (finalAssets.length !== 2 || finalAssets.find((asset) => asset.date === "2026-01-31")?.total !== 100 ||
+    finalAssets.find((asset) => asset.date === "2026-02-28")?.total !== 150) {
+  throw new Error("A→B→Aの再取込で複数日の資産が最後に読み込んだ値へ置換されません");
+}
+await repeatedContext.loadFiles([assetA]);
+if (repeatedContext.importState.assets.length !== 2 || repeatedContext.importState.assets[0].total !== 100) {
+  throw new Error("同一資産CSVの連続取込で値または日付の一意性が崩れます");
+}
+
 const ambiguous = new File(["日付,普通預金,合計,合計\n2026-06-30,100,100,100\n"], "data.csv");
 await context.loadFiles([ambiguous]);
 if (!context.importState.importMessages.some((message) => message.includes("合計列が曖昧"))) {
