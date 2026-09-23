@@ -18,7 +18,12 @@ function Start-Sleep { $script:waits++ }
 function Invoke-FakeGh {
   $global:LASTEXITCODE = 0
   if ($args[0] -eq 'pr') {
-    $global:LASTEXITCODE = 8
+    if ($script:waits -lt $script:fetchErrors) {
+      $global:LASTEXITCODE = 1
+      'HTTP 502: Bad Gateway'
+      return
+    }
+    $global:LASTEXITCODE = 1
     '[{"name":"check","state":"FAILURE"}]'
   } else {
   $latest = if ($script:pending -and $script:waits -lt $script:successAfter) { 'in_progress' } else { 'completed' }
@@ -32,6 +37,8 @@ function Invoke-FakeGh {
 $ghCommand = 'Invoke-FakeGh'
 $repo = 'test/repo'
 foreach ($case in @(
+  @{ name = 'transient-fetch-error'; old = 'failure'; latest = 'success'; fetchErrors = 1 },
+  @{ name = 'persistent-fetch-error'; old = 'failure'; latest = 'success'; fetchErrors = 10; fails = $true },
   @{ name = 'ignore-old-and-other-provider-failures'; old = 'failure'; latest = 'success' },
   @{ name = 'latest-failure-must-fail'; old = 'success'; latest = 'failure'; fails = $true },
   @{ name = 'wait-for-rerun'; old = 'failure'; latest = 'success'; pending = $true; successAfter = 1 },
@@ -40,6 +47,7 @@ foreach ($case in @(
   @{ name = 'timeout-with-resume-guidance'; old = 'failure'; latest = 'success'; pending = $true; successAfter = 100; timeout = 1; fails = $true }
 )) {
   $script:oldConclusion = $case.old
+  $script:fetchErrors = [int]$case.fetchErrors
   $script:conclusion = $case.latest
   $script:pending = $case.pending
   $script:queued = $case.queued
@@ -47,7 +55,9 @@ foreach ($case in @(
   $script:waits = 0
   $caught = $null
   try { Assert-RequiredChecksPassed -PullRequestNumber 1 -ExpectedHead 'head' -CheckTimeoutMinutes $(if ($case.timeout) { $case.timeout } else { 30 }) } catch { $caught = $_.Exception.Message }
-  if (($case.fails -and -not $caught) -or
+  if (($case.name -eq 'transient-fetch-error' -and $script:waits -ne 1) -or
+      ($case.name -eq 'persistent-fetch-error' -and ($script:waits -ne 2 -or $caught -notmatch 'HTTP 502')) -or
+      ($case.fails -and -not $caught) -or
       (-not $case.fails -and $caught) -or ($case.name -eq 'wait-for-rerun' -and $script:waits -ne 1) -or
       ($case.name -eq 'wait-over-60-seconds' -and $script:waits -ne 13) -or
       ($case.name -eq 'timeout-with-resume-guidance' -and ($script:waits -ne 11 -or $caught -notmatch 'ResumePullRequest'))) {
