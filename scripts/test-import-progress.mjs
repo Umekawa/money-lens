@@ -21,4 +21,12 @@ assert.equal(context.importState.transactions.length, 4000, "合成した大量C
 assert.equal(context.importState.importResults.length, 2, "ファイル別の結果を保持する");
 assert.equal(context.importState.importProgress.active, false, "完了後に進捗状態を終了する");
 assert.equal(context.importState.importProgress.current, "", "完了後に処理中ファイルを消去する");
-console.log(`Large import progress checks passed (${elapsed}ms, heap delta ${heapDelta}MiB).`);
+
+const assetRows = Array.from({ length: 150000 }, () => "2026-01-01,100,100").join("\n");
+const assetFile = new File([`日付,預金,合計\n${assetRows}`], "大量資産.csv", { type: "text/csv" });
+const assetStarted = performance.now();
+await context.loadFiles([assetFile]);
+const assetElapsed = Math.round(performance.now() - assetStarted);
+assert.equal(context.importState.assets.length, 1, "15万件の同日資産を正常に統合する");
+assert.equal(context.importState.importResults.at(-1).status, "成功", "大量資産ファイルを成功として記録する");
+console.log(`Large import checks passed (transactions ${elapsed}ms, assets ${assetElapsed}ms, heap delta ${heapDelta}MiB).`);
