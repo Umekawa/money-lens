@@ -13,6 +13,19 @@ if (mergedTransactions.length !== 3 || mergedTransactions[2] !== added) {
   throw new Error("明細の期間重複を除外しつつ正当な同日同額の重複を保持できません");
 }
 
+const idA = { ...first, id: "a" };
+const idB = { ...first, id: "b" };
+const correctedA = { ...idA, amount: -150, category: "日用品" };
+const idMerged = context.mergeTransactions([idA], [idB, correctedA]);
+if (idMerged.length !== 2 || idMerged[0].amount !== -150 || idMerged[0].category !== "日用品" || idMerged[1].id !== "b") {
+  throw new Error("IDが異なる正当な同額明細を保持し、同一IDの訂正版へ置換できません");
+}
+
+const periodOverlap = context.mergeTransactions([first, idA], [first, idA, idB]);
+if (periodOverlap.length !== 3 || periodOverlap[2].id !== "b") {
+  throw new Error("別名CSV相当の期間重複で既存行を重複させず、別ID明細を保持できません");
+}
+
 const nulInContent = { date: "2026-03-01", content: "店\0支店A", category: "食費", amount: -300 };
 const nulCollision = { date: "2026-03-01", content: "店", category: "支店A\0食費", amount: -300 };
 if (context.mergeTransactions([nulInContent], [nulCollision]).length !== 2) {
