@@ -174,6 +174,7 @@ function Assert-RequiredChecksPassed {
   param([string]$PullRequestNumber, [string]$ExpectedHead, [ValidateRange(1, 1440)][int]$CheckTimeoutMinutes = 30)
   $requiredNames = Get-RequiredCheckNames
   $checksReady = $false
+  $fetchFailures = 0
   $maxAttempts = $CheckTimeoutMinutes * 12
   for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     $actualHead = Get-PullRequestHeadCommit -PullRequestNumber $PullRequestNumber
@@ -181,12 +182,25 @@ function Assert-RequiredChecksPassed {
       throw "必須チェックの待機中にPR #$PullRequestNumber の先端コミットが変わりました。"
     }
 
-    $checkJson = & $ghCommand pr checks $PullRequestNumber --repo $repo --json name,state,link,workflow 2>$null
-    if ($LASTEXITCODE -notin @(0, 8) -or -not $checkJson) { throw '必須チェックの状態を取得できませんでした。' }
-    try { $checks = @($checkJson | ConvertFrom-Json) } catch { throw '必須チェックの応答を解析できませんでした。' }
-    if (-not $checks.Count -or @($checks | Where-Object { -not $_.name -or -not $_.state }).Count) {
-      throw '必須チェックの応答が空または不完全です。'
+    $checkOutput = & $ghCommand pr checks $PullRequestNumber --repo $repo --json name,state,link,workflow 2>&1
+    $checkExitCode = $LASTEXITCODE
+    $checkJson = ($checkOutput | Out-String).Trim()
+    $fetchError = $null
+    try {
+      # ghはチェック失敗で1、待機中で8を返す。JSONを検証してから状態を判定する。
+      if ($checkExitCode -notin @(0, 1, 8) -or -not $checkJson.StartsWith('[')) { throw 'JSON配列を取得できませんでした。' }
+      $checks = @($checkJson | ConvertFrom-Json -ErrorAction Stop)
+      if (@($checks | Where-Object { -not $_.name -or -not $_.state }).Count) { throw '必須チェックの応答が不完全です。' }
+    } catch { $fetchError = $_.Exception.Message }
+    if ($fetchError) {
+      $fetchFailures++
+      $detail = "必須チェック取得失敗 ($fetchFailures/3): 終了コード=$checkExitCode、$fetchError 応答=[$checkJson]"
+      if ($fetchFailures -ge 3) { throw $detail }
+      Write-Host $detail -ForegroundColor Yellow
+      if ($attempt -lt $maxAttempts) { Start-Sleep -Seconds 5 }
+      continue
     }
+    $fetchFailures = 0
     $checkRuns = @()
     if (@($script:RequiredCheckProviders | Where-Object { $_.AppId }).Count) {
       $runsJson = & $ghCommand api "repos/$repo/commits/$ExpectedHead/check-runs?filter=all&per_page=100" --paginate --slurp 2>$null
