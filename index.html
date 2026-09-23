@@ -36,7 +36,7 @@
 
       <section class="grid-2">
         <article class="card panel"><div class="panel-heading"><div><p class="eyebrow">BREAKDOWN</p><h2>カテゴリ別支出</h2></div><label for="monthSelect" class="sr-only">表示する月</label><select id="monthSelect"><option value="all">全期間</option></select></div><p id="categorySummary" class="muted" aria-live="polite"></p><div id="categoryChart" class="bars" aria-live="polite"></div></article>
-        <article class="card panel"><div class="panel-heading"><div><p class="eyebrow">ASSETS</p><h2>資産推移</h2></div><span id="assetLatest" class="muted" aria-live="polite">—</span></div><p id="assetMeta" class="asset-meta muted" aria-live="polite"></p><div id="assetChart" class="asset-chart"><p class="muted">資産推移CSVを読み込むと表示されます</p></div></article>
+        <article class="card panel"><div class="panel-heading"><div><p class="eyebrow">ASSETS</p><h2>資産推移</h2></div><span id="assetLatest" class="muted" aria-live="polite">—</span></div><p id="assetMeta" class="asset-meta muted" aria-live="polite"></p><p id="assetChartHelp" class="sr-only">グラフは0円を基準に表示し、正の値は上、負の値は下に描画します。記録が24件を超える場合は各月の最新値から直近24か月を表示します。</p><div id="assetChart" class="asset-chart" aria-describedby="assetChartHelp"><p class="muted">資産推移CSVを読み込むと表示されます</p></div></article>
       </section>
 
       <section class="card panel trend-panel"><div class="panel-heading"><div><p class="eyebrow">MONTHLY TREND</p><h2>月別の収入・支出・収支</h2></div><span class="muted">古い月から最大24か月</span></div><div class="trend-legend" aria-label="グラフの凡例"><span><i class="legend-dot income-dot"></i>収入</span><span><i class="legend-dot expense-dot"></i>支出</span><span><i class="legend-dot balance-dot"></i>収支（黒字は上、赤字は下）</span></div><div id="monthlyTrend" class="monthly-trend" aria-live="polite"></div></section>
