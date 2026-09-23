@@ -372,7 +372,10 @@ while ($Continuous -or $cycle -lt $Cycles) {
     if ($verificationOnly -and $reviewChanged) {
       throw "最終確認レビューで変更が発生しました。PR #$prNumber はマージせず、調査のため停止します。"
     }
-    if ($reviewExitCode -eq 0 -and $reviewOutput -match '(?m)^\s*REVIEW_PASS\s*$') {
+    $reviewLines = @($reviewOutput -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $finalReviewMarker = if ($reviewLines.Count) { $reviewLines[-1] } else { '' }
+    $hasReviewFailure = $reviewLines -contains 'REVIEW_FAIL'
+    if ($reviewExitCode -eq 0 -and $finalReviewMarker -ceq 'REVIEW_PASS' -and -not $hasReviewFailure) {
       # A reviewer may have left a fix uncommitted. Publish it and require a
       # fresh review so that code added after the pass is never merged unseen.
       if ($reviewChanged) {

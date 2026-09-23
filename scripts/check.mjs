@@ -29,6 +29,7 @@ execFileSync(process.execPath, ["scripts/test-import-progress.mjs"], { stdio: "i
 execFileSync(process.execPath, ["scripts/test-auto-discovery.mjs"], { stdio: "inherit" });
 const powershell = process.platform === "win32" ? "powershell" : "pwsh";
 execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-safe-changes.ps1"], { stdio: "inherit" });
+execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-review.ps1"], { stdio: "inherit" });
 
 execFileSync(process.execPath, ["scripts/test-file-startup.mjs"], { stdio: "inherit" });
 
