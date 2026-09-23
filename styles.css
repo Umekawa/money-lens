@@ -8,6 +8,11 @@
 .import-status summary{cursor:pointer}.import-result-details{margin-top:8px;max-height:240px;overflow:auto;overflow-wrap:anywhere}
 .import-progress{margin:-4px 0 8px;padding:8px 12px;border:1px solid #c7e2dd;border-radius:9px;background:#eef8f6;color:#286b64;font-size:12px}.cancel-import{margin-bottom:16px;border:0}.cancel-import[hidden]{display:none}
 .secondary-button:disabled{cursor:not-allowed;opacity:.5}
+@media(max-width:900px){
+  .topbar{flex-direction:column;align-items:stretch}
+  .topbar .import-actions{flex-wrap:wrap}
+  .topbar .import-actions>*{flex:1 1 calc(50% - 8px);min-height:44px;text-align:center}
+}
 @media(max-width:600px){
   .topbar{flex-direction:column;align-items:stretch}
   .topbar .import-actions{flex-wrap:wrap}
