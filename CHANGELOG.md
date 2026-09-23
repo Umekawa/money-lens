@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 対応CSVの列・日付・文字コード、データ保持、重複排除、明細・資産・月次集計のルールをREADMEに追記（Issue #72）
 - GitHub Pagesの公開前チェックを必須化し、必要なHTML・CSS・JavaScriptだけを専用成果物へ収集して公開（Issue #71）
 - CSVマニフェストのパスを`csvs/`配下の相対パスに限定し、URL特殊文字を正しく扱うよう修正
 - 自動CSV探索をディレクトリ一覧HTML依存から明示的な`csv-manifest.json`方式へ変更し、マニフェスト・個別CSVの取得失敗を画面に案内（Issue #70）
