@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "check": "node scripts/check.mjs",
+    "pages:build": "node scripts/build-pages.mjs",
     "ui:audit": "node scripts/ui-audit.mjs"
   },
   "devDependencies": {
