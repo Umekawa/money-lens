@@ -66,9 +66,15 @@ const runAudit = async () => {
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#clearData").click();
     if (!(await page.locator("#emptyState").isVisible())) throw new Error("データクリア後の空状態が表示されません");
+    const clearedDom = await page.locator("#dashboard").evaluate(element => element.outerHTML) + await page.locator("#importProgress").evaluate(element => element.outerHTML);
+    for (const oldValue of ["給与", "￥280,000", "デモ明細.csv", "普通預金", "data-value="]) {
+      if (clearedDom.includes(oldValue)) throw new Error(`データクリア後のDOMに旧データが残っています: ${oldValue}`);
+    }
+    if (await page.locator("#emptyDemoData").evaluate(element => element !== document.activeElement)) throw new Error("データクリア後のフォーカスが空状態の操作へ移動していません");
     await page.locator("#emptyDemoData").click();
     await page.locator("#dashboard").waitFor({ state: "visible" });
     if (!(await page.locator("#demoBadge").isVisible())) throw new Error("デモデータの再取込に失敗しました");
+    if (!(await page.locator("#transactions").textContent()).includes("給与")) throw new Error("クリア後の再取込で明細が復元されません");
     await page.screenshot({ path: "artifacts/ui-audit/desktop.png", fullPage: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
