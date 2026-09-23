@@ -16,7 +16,7 @@ await context.loadFiles([mixed]);
 assert.equal(context.importState.transactions.length, 2, "不正行大量時も正常明細は重複排除して反映する");
 assert.equal(context.importState.transactions.reduce((sum, row) => sum - row.amount, 0), 300);
 assert.deepEqual(JSON.parse(JSON.stringify(context.importState.importResults.at(-1))), {
-  name: "mixed.csv", status: "成功", accepted: 1, excluded: 150000, duplicate: 1, reason: ""
+  name: "mixed.csv", status: "成功", type: "transactions", accepted: 1, excluded: 150000, invalid: 150000, duplicate: 1, replaced: 0, reason: ""
 });
 
 const invalidOnly = file("invalid-only.csv", invalidRows);
