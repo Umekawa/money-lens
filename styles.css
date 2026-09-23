@@ -23,4 +23,5 @@
 }
 .asset-detail{margin-top:10px;padding:10px 12px;background:#f5f8f8;border-radius:8px;font-size:12px}.asset-detail dl{margin:6px 0 8px}.asset-detail dl div{display:flex;justify-content:space-between;gap:12px}.asset-detail dt,.asset-detail dd{margin:0}.asset-detail dd{font-weight:700}.asset-month-button{padding:6px 9px;font-size:11px;border:0}.asset-bar{border:0;padding:0}
  .trend-legend{flex-wrap:wrap}.trend-month{flex-basis:86px;min-width:86px}.trend-item{min-width:20px}.trend-track{position:relative;height:calc(100% - 32px);border-radius:4px}.trend-zero-line{position:absolute;top:50%;left:0;right:0;width:auto;height:0;border-top:1px solid #87969c;pointer-events:none;overflow:visible}.trend-bar{position:absolute;bottom:50%;width:100%;border-radius:4px 4px 0 0}.trend-bar[style*="top:50%"]{border-radius:0 0 4px 4px}.balance-positive{background:#6b91c2}.balance-negative{background:#c45d67}.trend-value{max-width:100%;overflow-wrap:anywhere;color:#66747d;font-size:10px;line-height:1.2;text-align:center;white-space:normal}
- button:focus-visible,select:focus-visible,.search:focus-visible{outline:3px solid #204f4a;outline-offset:2px}
+}
+button:focus-visible,select:focus-visible,.search:focus-visible{outline:3px solid #204f4a;outline-offset:2px}
