@@ -14,14 +14,14 @@
 ## 手順
 
 1. `main` の作業ツリーが clean であることを確認し、リリース対象の Issue と変更内容を確認する。
-2. `npm version <major|minor|patch> --no-git` を実行して `package.json` と `package-lock.json` のバージョンを同時に更新する。既存の `v` なしタグと衝突しないバージョンを選ぶ。
+2. `npm version <major|minor|patch> --no-git` を実行して `package.json` と `package-lock.json` のバージョンを同時に更新する。既存の `v` 付きタグと衝突しないバージョンを選ぶ。
 3. `CHANGELOG.md` の `Unreleased` の内容を新しい `## <version> - YYYY-MM-DD` に移し、次の `Unreleased` を空で先頭に残す。内容には対象 Issue 番号を含める。
 4. `npm run check` を実行する。失敗した場合はリリースを中止し、原因を修正してから再実行する。
 5. バージョン更新、変更履歴、チェック結果を確認する。個人 CSV、`csvs/`、秘密情報が差分に含まれていないことも確認する。
 6. 変更を通常のレビュー経由で `main` に反映した後、`git tag v<version>` を作成して push する。
 7. GitHub Release をタグ `v<version>` から作成し、本文には対応する CHANGELOG の版の内容を転記する。
 
-GitHub の Issue・タグ・Release の作成や push は手作業で行わず、`scripts/autodev.ps1` が提供するレビュー・公開フロー経由で行う。リリース作業だけを行う場合も、`-PublishCurrentChanges` などの既存変更公開モードでレビューを通し、GitHub 側の操作を自動開発サイクルに任せる。
+GitHub の Issue・PR・ブランチの push・merge は手作業で行わず、`scripts/autodev.ps1` が提供するレビュー・公開フロー経由で行う。タグとGitHub Releaseの作成は現行の `autodev.ps1` の対象外なので、merge後に承認済みのリリース運用で実施する。リリース対象の変更を公開する場合は、リリース作業だけであっても `-PublishCurrentChanges` などの既存変更公開モードでレビューを通す。
 
 ## 失敗時の扱い
 
