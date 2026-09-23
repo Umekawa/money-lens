@@ -12,6 +12,7 @@
   .topbar{flex-direction:column;align-items:stretch}
   .topbar .import-actions{flex-wrap:wrap}
   .topbar .import-actions>*{flex:1 1 calc(50% - 8px);min-height:44px;text-align:center}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:600px){
   .topbar{flex-direction:column;align-items:stretch}
