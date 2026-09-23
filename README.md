@@ -6,6 +6,8 @@
 
 個人CSVは `csvs/` に置けますが、Gitには登録されません。
 
+HTTPサーバーで自動読み込みする場合は、ルートに `csv-manifest.json`（`{"files":["収支/2026.csv","資産.csv"]}`）を置いてください。ディレクトリ一覧HTMLには依存せず、マニフェストや個別CSVの取得に失敗した場合は画面に案内します。
+
 ```powershell
 python -m http.server 8765 --bind 127.0.0.1
 ```
