@@ -80,7 +80,7 @@ pwsh ./scripts/autodev.ps1 -Continuous -IntervalMinutes 10
 
 停止したPRは、そのブランチ上で `pwsh ./scripts/autodev.ps1 -ResumePullRequest` を実行すると再開できます。ローカル変更をチェック・コミット・pushした後、既存PRのAIレビュー・CI確認・マージを行います。
 
-プランや権限の制約でブランチ保護設定を取得できない場合は、`-RequiredChecks check` でこのリポジトリのCIジョブ名を明示してください（例: `pwsh ./scripts/autodev.ps1 -ResumePullRequest -RequiredChecks check`）。指定したチェックがレビュー済みの同じコミットで成功するまでマージしません。保護設定を取得できる場合は、設定側の必須チェックも合わせて確認します。
+ブランチ保護設定を取得できない場合にも、このリポジトリのCIジョブ名 `check` を必須チェックとして確認します。別のCIジョブ名を使う場合は `-RequiredChecks` で指定してください（例: `pwsh ./scripts/autodev.ps1 -ResumePullRequest -RequiredChecks check,lint`）。指定したチェックがレビュー済みの同じコミットで成功するまでマージしません。保護設定を取得できる場合は、設定側の必須チェックも合わせて確認します。
 
 ## 開発方針
 
