@@ -5,7 +5,8 @@
   "scripts": {
     "check": "node scripts/check.mjs",
     "pages:build": "node scripts/build-pages.mjs",
-    "ui:audit": "node scripts/ui-audit.mjs"
+    "ui:audit": "node scripts/ui-audit.mjs",
+    "perf:audit": "node scripts/audit-scale.mjs"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

@@ -141,13 +141,15 @@ function Get-RequiredCheckNames {
     return @($explicitNames | Select-Object -Unique)
   }
   try {
-    $contextData = $contextJson | ConvertFrom-Json -NoEnumerate
+    $contextData = $contextJson | ConvertFrom-Json
   } catch {
     throw 'mainブランチの必須チェック設定を解析できませんでした。'
   }
   # GitHub API returns a string array for this endpoint. Keep accepting the
   # object form as well for GitHub Enterprise/API compatibility.
-  $contexts = if ($contextData -is [array]) { @($contextData) } else { @($contextData.contexts) }
+  # ConvertFrom-Json in Windows PowerShell 5.1 enumerates a one-item JSON
+  # array, so inspect the JSON shape rather than relying on -NoEnumerate.
+  $contexts = if (([string]$contextJson).TrimStart().StartsWith('[')) { @($contextData) } else { @($contextData.contexts) }
   $names = @(@($contexts) + $explicitNames | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
   if ($names.Count -eq 0) { throw 'mainブランチに必須チェックが登録されていません。' }
   return @($names | Select-Object -Unique)
