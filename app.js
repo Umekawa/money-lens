@@ -59,7 +59,8 @@ async function load(files,mode='user'){if(!files?.length)return;const generation
       if(url.pathname.endsWith('/')){await visit(url);continue}
       if(!url.pathname.toLowerCase().endsWith('.csv'))continue;
       // パスを検証してから再符号化し、日本語・空白・#・%を保持する。
-      const relative=url.pathname.slice(root.pathname.length).split('/').map(decodeURIComponent).join('/');
+      let relative;
+      try{relative=url.pathname.slice(root.pathname.length).split('/').map(decodeURIComponent).join('/')}catch{continue}
       const file=manifestFile(relative);
       files.set(file.url,file);
     }

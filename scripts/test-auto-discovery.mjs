@@ -53,6 +53,7 @@ responses.set("http://localhost:8765/csvs/", { ok: true, text: async () => `
   <a href="../">親へ</a><a href="?sort=name">並べ替え</a>
   <a href="https://example.com/external.csv">外部</a>
   <a href="/other/">範囲外</a><a href="./">現在</a>
+  <a href="broken%">不正な符号化</a>
   <a href="nested/">子フォルダ</a><a href="nested/">重複</a>
   <a href="notes.txt">CSV以外</a>
   <a href="%E8%B3%87%E7%94%A3%20%23%25&amp;test.csv">資産</a>
