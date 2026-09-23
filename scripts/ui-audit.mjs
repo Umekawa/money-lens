@@ -73,6 +73,8 @@ const runAudit = async () => {
     const search = page.locator("#search");
     await search.fill("給与");
     if ((await page.locator("#transactions tr").count()) !== 2) throw new Error("明細検索結果の件数が想定と異なります");
+    await search.fill("82,000");
+    if ((await page.locator("#transactions tr").count()) !== 1 || !(await page.locator("#transactions").textContent()).includes("家賃")) throw new Error("金額による明細検索が想定どおりに動作しません");
     await search.fill("存在しない監査文字列");
     if (!(await page.getByText("該当する明細がありません").isVisible())) throw new Error("検索結果なしの表示がありません");
 
