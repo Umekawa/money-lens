@@ -372,7 +372,9 @@ while ($Continuous -or $cycle -lt $Cycles) {
     if ($verificationOnly -and $reviewChanged) {
       throw "最終確認レビューで変更が発生しました。PR #$prNumber はマージせず、調査のため停止します。"
     }
-    $reviewLines = @($reviewOutput -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    # 端末では見えないANSI装飾を除去してから最終マーカーを判定する。
+    $plainReviewOutput = $reviewOutput -replace '\x1B\[[0-?]*[ -/]*[@-~]', ''
+    $reviewLines = @($plainReviewOutput -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     $finalReviewMarker = if ($reviewLines.Count) { $reviewLines[-1] } else { '' }
     $hasReviewFailure = $reviewLines -contains 'REVIEW_FAIL'
     if ($reviewExitCode -eq 0 -and $finalReviewMarker -ceq 'REVIEW_PASS' -and -not $hasReviewFailure) {
@@ -399,6 +401,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
       $reviewPassed = $true
       break
     }
+    Write-Host "レビュー判定不成立: 終了コード=$reviewExitCode、最終行=[$finalReviewMarker]、REVIEW_FAILあり=$hasReviewFailure" -ForegroundColor Yellow
     if ($reviewAttempt -lt $ReviewAttempts) {
       Write-Host 'レビューで問題が見つかったため、修正後に再レビューします。' -ForegroundColor Yellow
       Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'

@@ -48,6 +48,8 @@ function Invoke-FakeReview {
 }
 
 $cases = @(
+  @{ name = 'ANSI装飾付きで合格'; steps = @(@{ result = "$([char]27)[32mREVIEW_PASS$([char]27)[0m`n$([char]27)[0m" }); calls = 1; passed = $true; published = 1 },
+  @{ name = 'ANSI装飾付きFAILも拒否'; steps = @(@{ result = "$([char]27)[31mREVIEW_FAIL$([char]27)[0m`nREVIEW_PASS" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
   @{ name = '変更なしで合格'; steps = @(@{ result = 'REVIEW_PASS' }); calls = 1; passed = $true; published = 1 },
   @{ name = '途中PASSの後に最終FAIL'; steps = @(@{ result = "REVIEW_PASS`n指摘が残っています`nREVIEW_FAIL" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
   @{ name = 'PASSの後に矛盾するFAIL'; steps = @(@{ result = "REVIEW_FAIL`nREVIEW_PASS" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
