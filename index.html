@@ -32,6 +32,7 @@
         <article class="card metric accent"><span>収支</span><strong id="balance">—</strong><small>収入 − 支出</small></article>
       </section>
       <aside id="importStatus" class="import-status" aria-live="polite" hidden></aside>
+      <aside id="importProgress" class="import-progress" role="status" aria-live="polite" hidden></aside><button id="cancelImport" class="secondary-button cancel-import" type="button" hidden>読み込みを中止</button>
 
       <section class="grid-2">
         <article class="card panel"><div class="panel-heading"><div><p class="eyebrow">BREAKDOWN</p><h2>カテゴリ別支出</h2></div><label for="monthSelect" class="sr-only">表示する月</label><select id="monthSelect"><option value="all">全期間</option></select></div><p id="categorySummary" class="muted" aria-live="polite"></p><div id="categoryChart" class="bars" aria-live="polite"></div></article>
