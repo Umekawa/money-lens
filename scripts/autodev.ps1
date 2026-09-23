@@ -451,7 +451,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed after AI review.' }
 
-  Assert-RequiredChecksPassed -PullRequestNumber $prNumber -ExpectedHead $reviewedHead
+  Assert-RequiredChecksPassed -PullRequestNumber $prNumber -ExpectedHead $reviewedHead -CheckTimeoutMinutes $CheckTimeoutMinutes
   & $ghCommand pr merge $prNumber --repo $repo --squash --delete-branch --match-head-commit $reviewedHead --subject $prTitle --body '自動開発サイクルで実装。AIレビュー、ローカルチェック、GitHub Actionsを通過。'
   if ($LASTEXITCODE -ne 0) { throw "Could not merge pull request #$prNumber." }
 
