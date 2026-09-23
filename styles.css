@@ -8,6 +8,8 @@
 .import-progress{margin:-4px 0 8px;padding:8px 12px;border:1px solid #c7e2dd;border-radius:9px;background:#eef8f6;color:#286b64;font-size:12px}.cancel-import{margin-bottom:16px;border:0}
 .secondary-button:disabled{cursor:not-allowed;opacity:.5}
 @media(max-width:600px){
+  .topbar{flex-direction:column;align-items:stretch}
+  .topbar .import-actions{flex-wrap:wrap}
   h1{font-size:20px}
   .metric{min-width:0}
   .metric strong{overflow-wrap:anywhere}
