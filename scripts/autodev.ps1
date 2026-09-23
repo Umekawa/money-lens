@@ -16,7 +16,9 @@
   [ValidateRange(1, 1440)]
   [int]$IntervalMinutes = 10,
   [ValidateRange(1, 3)]
-  [int]$ReviewAttempts = 2
+  [int]$ReviewAttempts = 2,
+  [ValidateRange(1, 1440)]
+  [int]$CheckTimeoutMinutes = 30
 )
 
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
@@ -169,10 +171,11 @@ function Get-RequiredCheckNames {
 }
 
 function Assert-RequiredChecksPassed {
-  param([string]$PullRequestNumber, [string]$ExpectedHead)
+  param([string]$PullRequestNumber, [string]$ExpectedHead, [ValidateRange(1, 1440)][int]$CheckTimeoutMinutes = 30)
   $requiredNames = Get-RequiredCheckNames
   $checksReady = $false
-  for ($attempt = 1; $attempt -le 12; $attempt++) {
+  $maxAttempts = $CheckTimeoutMinutes * 12
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     $actualHead = Get-PullRequestHeadCommit -PullRequestNumber $PullRequestNumber
     if ($actualHead -ne $ExpectedHead) {
       throw "必須チェックの待機中にPR #$PullRequestNumber の先端コミットが変わりました。"
@@ -217,10 +220,11 @@ function Assert-RequiredChecksPassed {
         throw "必須チェックが成功していません: $(@($terminalFailure.name) + $providerFailures -join ', ')"
       }
     }
-    Write-Host 'GitHub Actionsの必須チェックを同じコミットで待っています...' -ForegroundColor Yellow
+    if ($attempt -eq $maxAttempts) { break }
+    Write-Host "GitHub Actionsの必須チェックを同じコミットで待っています... ($attempt/$maxAttempts、上限 $CheckTimeoutMinutes 分)" -ForegroundColor Yellow
     Start-Sleep -Seconds 5
   }
-  if (-not $checksReady) { throw "PR #$PullRequestNumber の必須チェックが登録されていないか、成功しませんでした。" }
+  if (-not $checksReady) { throw "PR #$PullRequestNumber の必須チェックが $CheckTimeoutMinutes 分以内に成功しませんでした。CI状態を確認し、-ResumePullRequest -CheckTimeoutMinutes <分> で再開してください。" }
   $actualHead = Get-PullRequestHeadCommit -PullRequestNumber $PullRequestNumber
   if ($actualHead -ne $ExpectedHead) {
     throw "必須チェック完了後にPR #$PullRequestNumber の先端コミットが変わりました。"
@@ -447,7 +451,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed after AI review.' }
 
-  Assert-RequiredChecksPassed -PullRequestNumber $prNumber -ExpectedHead $reviewedHead
+  Assert-RequiredChecksPassed -PullRequestNumber $prNumber -ExpectedHead $reviewedHead -CheckTimeoutMinutes $CheckTimeoutMinutes
   & $ghCommand pr merge $prNumber --repo $repo --squash --delete-branch --match-head-commit $reviewedHead --subject $prTitle --body '自動開発サイクルで実装。AIレビュー、ローカルチェック、GitHub Actionsを通過。'
   if ($LASTEXITCODE -ne 0) { throw "Could not merge pull request #$prNumber." }
 
