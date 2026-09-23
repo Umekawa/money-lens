@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "check": "node scripts/check.mjs",
+    "check:autodev": "pwsh -NoProfile -File scripts/test-autodev-selection.ps1",
     "pages:build": "node scripts/build-pages.mjs",
     "ui:audit": "node scripts/ui-audit.mjs",
     "perf:audit": "node scripts/audit-scale.mjs"
