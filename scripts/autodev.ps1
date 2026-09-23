@@ -347,12 +347,46 @@ while ($Continuous -or $cycle -lt $Cycles) {
   if ($PublishCurrentChanges) {
     Write-Host '既存の変更を公開対象として使用します。' -ForegroundColor Yellow
   } else {
+    if (-not $issue -and -not $PublishCurrentChanges) {
+      $prompt += @(
+        '',
+        'For a self-discovered improvement, before finishing write .autodev-discovery.json in the repository root as UTF-8 JSON with these string fields:',
+        '{ "title": "具体的な課題名（内容を識別できる）", "problem": "実装前の問題", "evidence": "根拠（確認したファイル・箇所や再現結果）", "criteria": "完了条件", "verification": "npm run checkを含む検証結果", "related": "関連する既存Issue番号。なければ『なし』" }',
+        'Do not perform GitHub operations. The wrapper will validate this record and create the Issue and PR using its title and structured details.'
+      ) -join [Environment]::NewLine
+    }
     & $command run $prompt
     if ($LASTEXITCODE -ne 0) { throw "OpenCode exited with code $LASTEXITCODE" }
   }
 
+  $discovery = $null
+  $discoveryBody = $null
+  if (-not $issue -and -not $PublishCurrentChanges) {
+    $discoveryPath = Join-Path (Get-Location) '.autodev-discovery.json'
+    if (-not (Test-Path -LiteralPath $discoveryPath -PathType Leaf)) {
+      throw '自己発見した改善の記録 .autodev-discovery.json がありません。'
+    }
+    $discovery = Get-Content -LiteralPath $discoveryPath -Raw -Encoding utf8 | ConvertFrom-Json -ErrorAction Stop
+    foreach ($field in @('title', 'problem', 'evidence', 'criteria', 'verification', 'related')) {
+      if ([string]::IsNullOrWhiteSpace([string]$discovery.$field)) { throw "自己発見Issueの$field が空です。" }
+    }
+    $discoveryBody = @(
+      '## 課題名', $discovery.title,
+      '', '## 実装前の問題', $discovery.problem,
+      '', '## 根拠', $discovery.evidence,
+      '', '## 完了条件', $discovery.criteria,
+      '', '## 検証結果', $discovery.verification,
+      '', '## 関連Issue', $discovery.related,
+      '',
+      '## 注意',
+      '個人CSV、個人情報、秘密情報は対象外です。'
+    ) -join [Environment]::NewLine
+    $prTitle = [string]$discovery.title
+  }
+
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed. The branch was left for investigation.' }
+  if ($discoveryPath) { Remove-Item -LiteralPath $discoveryPath -Force }
 
   if ((git status --porcelain).Length -gt 0) {
     Assert-SafeChanges
@@ -373,15 +407,9 @@ while ($Continuous -or $cycle -lt $Cycles) {
   git push -u origin $branch
   if ($LASTEXITCODE -ne 0) { throw 'Could not push the development branch.' }
 
-  $prTitle = if ($PublishCurrentChanges) { $PublishTitle } elseif ($issue) { "対応: $($issue.title)" } else { '自動検出した改善' }
+  $prTitle = if ($PublishCurrentChanges) { $PublishTitle } elseif ($issue) { "対応: $($issue.title)" } else { $null }
   if (-not $issue -and -not $PublishCurrentChanges) {
-    $discoveryBody = @(
-      '## 概要',
-      '自動開発サイクルでコードとUIを確認し、実装対象として記録した改善です。',
-      '',
-      '## 注意',
-      '個人CSV、個人情報、秘密情報は対象外です。'
-    ) -join [Environment]::NewLine
+    $prTitle = [string]$discovery.title
     $issueUrl = & $ghCommand issue create --repo $repo --title $prTitle --body $discoveryBody
     if ($LASTEXITCODE -ne 0) { throw 'Could not create the discovered Issue.' }
     $discoveredNumber = [regex]::Match(($issueUrl -join "`n"), '/issues/(\d+)').Groups[1].Value
