@@ -12,7 +12,7 @@ nodes['#search'].value = '印刷対象';
 vm.runInNewContext(`state.transactions = Array.from({length: 650}, (_, i) => ({date:'2026-09-01', content:'印刷対象'+i, category:'テスト', amount:-100}));
 state.transactions.push({date:'2026-08-01',content:'印刷対象・別月',category:'テスト',amount:-100},{date:'2026-09-01',content:'除外する明細',category:'テスト',amount:-100});
 state.transactionPage=2; renderTransactions();`, context);
-const countRows = () => (nodes['#transactions'].innerHTML.match(/<tr>/g) || []).length;
+const countRows = () => (nodes['#transactions'].innerHTML.match(/<tr(?:\s|>)/g) || []).length;
 assert.equal(countRows(), 300);
 const original = nodes['#transactions'].innerHTML;
 for (let i = 0; i < 2; i++) {
