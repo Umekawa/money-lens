@@ -37,7 +37,7 @@ CSVは「CSVを選択」から個別に、または「フォルダを選択」�
 
 個人CSVは `csvs/` に置けますが、Gitには登録されません。
 
-HTTPサーバーで自動読み込みする場合は、ルートに `csv-manifest.json`（`{"files":["収支/2026.csv","資産.csv"]}`）を置いてください。ディレクトリ一覧HTMLには依存せず、マニフェストや個別CSVの取得に失敗した場合は画面に案内します。
+下記のPythonサーバーでは、`csvs/` にCSVを置くだけでサブフォルダも含めて自動探索します。読み込み対象を指定したい場合やディレクトリ一覧を提供しないサーバーでは、ルートに `csv-manifest.json`（`{"files":["収支/2026.csv","資産.csv"]}`）を置いてください。マニフェストがある場合はその指定を優先し、404の場合だけフォルダ一覧に切り替えます。取得や探索に失敗した場合は画面に案内します。
 
 ```powershell
 python -m http.server 8765 --bind 127.0.0.1
@@ -52,6 +52,15 @@ python -m http.server 8765 --bind 127.0.0.1
 ```powershell
 npm run check
 ```
+
+大量データ時の調査を再実行する場合は、Chromiumを準備して次を実行します。合成CSVだけを使い、取込・検索・中止・保持メモリを測定します。
+
+```powershell
+npx playwright install chromium
+npm run perf:audit
+```
+
+測定条件と結果の解釈は [大量データ調査](docs/scale-audit-2026-09-23.md) を参照してください。結果は `artifacts/scale-audit/` に保存します。
 
 ## 自動開発サイクル
 
@@ -70,6 +79,8 @@ pwsh ./scripts/autodev.ps1 -Continuous -IntervalMinutes 10
 `-ReviewAttempts 2`（既定）回までAIレビューで修正を試みます。最後のレビューが合格でも修正を伴う場合は、ローカルチェックと公開後に変更禁止の確認レビューを1回追加します。解決できない指摘が残った場合や確認レビューでさらに変更された場合は、PRを開いたまま停止します。個人CSV、`csvs/`、秘密情報には触れません。GitHub側ではActionsの成功をマージ条件にし、必要に応じてブランチ保護や通知を設定してください。自動マージは強い権限を持つため、最初は単発実行で結果を確認してから連続運転してください。
 
 停止したPRは、そのブランチ上で `pwsh ./scripts/autodev.ps1 -ResumePullRequest` を実行すると再開できます。ローカル変更をチェック・コミット・pushした後、既存PRのAIレビュー・CI確認・マージを行います。
+
+プランや権限の制約でブランチ保護設定を取得できない場合は、`-RequiredChecks check` でこのリポジトリのCIジョブ名を明示してください（例: `pwsh ./scripts/autodev.ps1 -ResumePullRequest -RequiredChecks check`）。指定したチェックがレビュー済みの同じコミットで成功するまでマージしません。保護設定を取得できる場合は、設定側の必須チェックも合わせて確認します。
 
 ## 開発方針
 
