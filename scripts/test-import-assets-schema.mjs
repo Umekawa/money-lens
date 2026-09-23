@@ -15,7 +15,7 @@ if (context.classifyHeaders(["日付", "普通預金", "投資信託", "合計"]
 }
 
 const spacedHeaders = new File([
-  "日 付,資産 内訳,普通 預金,資産 合計\n" +
+  "日 付,資産 内訳,普通 預金,合 計\n" +
   "2026-06-30,100,200,300\n",
 ], "空白付き.csv");
 await context.loadFiles([spacedHeaders]);
@@ -24,7 +24,7 @@ if (context.importState.assets.length !== 1 || context.importState.assets[0].tot
 }
 
 const reordered = new File([
-  "日付,資産内訳,普通預金,資産合計\n" +
+  "日付,資産内訳,普通預金,合計\n" +
   "2026-06-30,100,200,300\n",
 ], "任意の名前.csv");
 await context.loadFiles([reordered]);
@@ -37,6 +37,30 @@ const ambiguous = new File(["日付,普通預金,合計,合計\n2026-06-30,100,1
 await context.loadFiles([ambiguous]);
 if (!context.importState.importMessages.some((message) => message.includes("合計列が曖昧"))) {
   throw new Error("合計列が曖昧な資産CSVを案内できません");
+}
+
+for (const [headers, expectedTotal, expectedBreakdown] of [
+  [["日付", "預金合計", "総資産"], 300, 100],
+  [["日付", "総資産", "預金合計"], 300, 100],
+  [["日付", "合計", "預金合計"], 300, 100],
+  [["日付", "預金合計", "合計"], 300, 100],
+  [["日付", "純資産", "総資産"], 300, 300],
+  [["日付", "総資産", "純資産"], 300, 300],
+]) {
+  const isolated = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
+  vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state;`, isolated);
+  await isolated.loadFiles([new File([`${headers.join(",")}\n2026-06-30,${headers.slice(1).map(header => header === "預金合計" ? 100 : 300).join(",")}\n`], "total-priority.csv")]);
+  const asset = isolated.importState.assets[0];
+  if (!asset || asset.total !== expectedTotal || !asset.breakdown.some(item => item.value === expectedBreakdown)) {
+    throw new Error(`総資産/小計の選択または列順入替に失敗: ${headers.join(",")}`);
+  }
+}
+
+const subtotalOnly = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
+vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state;`, subtotalOnly);
+await subtotalOnly.loadFiles([new File(["日付,預金合計\n2026-06-30,100\n"], "subtotal-only.csv")]);
+if (subtotalOnly.importState.assets.length || !subtotalOnly.importState.importMessages.length) {
+  throw new Error("小計列だけのCSVを総額と誤認、または案内できません");
 }
 
 for (const totalHeader of ["合計", "総額", "純資産", "総資産", "残高合計"]) {
