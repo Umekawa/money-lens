@@ -359,6 +359,32 @@ while ($Continuous -or $cycle -lt $Cycles) {
     if ($LASTEXITCODE -ne 0) { throw "OpenCode exited with code $LASTEXITCODE" }
   }
 
+  $discovery = $null
+  $discoveryBody = $null
+  if (-not $issue -and -not $PublishCurrentChanges) {
+    $discoveryPath = Join-Path (Get-Location) '.autodev-discovery.json'
+    if (-not (Test-Path -LiteralPath $discoveryPath -PathType Leaf)) {
+      throw '自己発見した改善の記録 .autodev-discovery.json がありません。'
+    }
+    $discovery = Get-Content -LiteralPath $discoveryPath -Raw -Encoding utf8 | ConvertFrom-Json -ErrorAction Stop
+    foreach ($field in @('title', 'problem', 'evidence', 'criteria', 'verification', 'related')) {
+      if ([string]::IsNullOrWhiteSpace([string]$discovery.$field)) { throw "自己発見Issueの$field が空です。" }
+    }
+    $discoveryBody = @(
+      '## 課題名', $discovery.title,
+      '', '## 実装前の問題', $discovery.problem,
+      '', '## 根拠', $discovery.evidence,
+      '', '## 完了条件', $discovery.criteria,
+      '', '## 検証結果', $discovery.verification,
+      '', '## 関連Issue', $discovery.related,
+      '',
+      '## 注意',
+      '個人CSV、個人情報、秘密情報は対象外です。'
+    ) -join [Environment]::NewLine
+    $prTitle = [string]$discovery.title
+    Remove-Item -LiteralPath $discoveryPath -Force
+  }
+
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed. The branch was left for investigation.' }
 
@@ -383,27 +409,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
 
   $prTitle = if ($PublishCurrentChanges) { $PublishTitle } elseif ($issue) { "対応: $($issue.title)" } else { $null }
   if (-not $issue -and -not $PublishCurrentChanges) {
-    $discoveryPath = Join-Path (Get-Location) '.autodev-discovery.json'
-    if (-not (Test-Path -LiteralPath $discoveryPath -PathType Leaf)) {
-      throw '自己発見した改善の記録 .autodev-discovery.json がありません。'
-    }
-    $discovery = Get-Content -LiteralPath $discoveryPath -Raw -Encoding utf8 | ConvertFrom-Json -ErrorAction Stop
-    foreach ($field in @('title', 'problem', 'evidence', 'criteria', 'verification', 'related')) {
-      if ([string]::IsNullOrWhiteSpace([string]$discovery.$field)) { throw "自己発見Issueの$field が空です。" }
-    }
     $prTitle = [string]$discovery.title
-    $discoveryBody = @(
-      '## 課題名', $discovery.title,
-      '', '## 実装前の問題', $discovery.problem,
-      '', '## 根拠', $discovery.evidence,
-      '', '## 完了条件', $discovery.criteria,
-      '', '## 検証結果', $discovery.verification,
-      '', '## 関連Issue', $discovery.related,
-      '',
-      '## 注意',
-      '個人CSV、個人情報、秘密情報は対象外です。'
-    ) -join [Environment]::NewLine
-    Remove-Item -LiteralPath $discoveryPath -Force
     $issueUrl = & $ghCommand issue create --repo $repo --title $prTitle --body $discoveryBody
     if ($LASTEXITCODE -ne 0) { throw 'Could not create the discovered Issue.' }
     $discoveredNumber = [regex]::Match(($issueUrl -join "`n"), '/issues/(\d+)').Groups[1].Value
