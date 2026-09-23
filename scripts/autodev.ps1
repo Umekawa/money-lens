@@ -139,6 +139,7 @@ function Get-RequiredCheckNames {
   if ($LASTEXITCODE -ne 0) {
     if ($explicitNames.Count -eq 0) { throw 'mainブランチの必須チェック設定を取得できませんでした。利用できない場合は -RequiredChecks でCIジョブ名を明示してください。' }
     Write-Host "ブランチ保護設定を取得できないため、明示された必須チェックを使用します: $($explicitNames -join ', ')" -ForegroundColor Yellow
+    $script:RequiredCheckProviders = @($explicitNames | ForEach-Object { [pscustomobject]@{ Name = $_; AppId = $null } })
     return @($explicitNames | Select-Object -Unique)
   }
   try {
@@ -183,13 +184,22 @@ function Assert-RequiredChecksPassed {
     if (-not $checks.Count -or @($checks | Where-Object { -not $_.name -or -not $_.state }).Count) {
       throw '必須チェックの応答が空または不完全です。'
     }
+    $checkRuns = @()
+    if (@($script:RequiredCheckProviders | Where-Object { $_.AppId }).Count) {
+      $runsJson = & $ghCommand api "repos/$repo/commits/$ExpectedHead/check-runs" --paginate --slurp 2>$null
+      if ($LASTEXITCODE -ne 0 -or -not $runsJson) { throw 'チェック実行の提供元を取得できませんでした。' }
+      try { $checkRuns = @($runsJson | ConvertFrom-Json | ForEach-Object { $_.check_runs }) } catch { throw 'チェック実行の提供元を解析できませんでした。' }
+      if (-not $checkRuns.Count) { throw 'チェック実行の提供元応答が空です。' }
+    }
     $missing = @($requiredNames | Where-Object { $name = $_; -not @($checks | Where-Object { $_.name -eq $name }).Count })
     if ($missing.Count -eq 0) {
       $failed = @()
       foreach ($required in $script:RequiredCheckProviders) {
         $matching = @($checks | Where-Object { $_.name -eq $required.Name })
         if ($required.AppId) {
-          $matching = @($matching | Where-Object { $_.link -match "/apps/$($required.AppId)(/|$)" })
+          $matchingRuns = @($checkRuns | Where-Object { $_.name -eq $required.Name -and $_.app.id -eq $required.AppId })
+          if (-not $matchingRuns.Count -or @($matchingRuns | Where-Object { $_.status -ne 'completed' -or $_.conclusion -ne 'success' }).Count) { $failed += $required.Name }
+          continue
         }
         if (-not $matching.Count -or @($matching | Where-Object { $_.state -ne 'SUCCESS' }).Count) { $failed += $required.Name }
       }
