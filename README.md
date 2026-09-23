@@ -33,6 +33,8 @@ CSVは「CSVを選択」から個別に、または「フォルダを選択」�
 
 現在のブラウザでFile APIとTextDecoderを利用できる必要があります。最新版のChrome、Edge、Firefox、Safariでの利用を想定しています。
 
+ブラウザ対応は最新版のChrome/Edge/Firefox/Safariを対象とします。`npm run ui:audit` はPlaywright Chromiumで合成CSVを使った自動監査を実行します。Firefox/Safari相当の確認は最新版FirefoxおよびSafariで、開発サーバーを開き、CSV追加から合成CSVを選択し、集計・検索・月選択・301件以上のページ送り・再取込・読み込み中止・クリア、および390px幅で資産内訳と長い金額表示を手動確認してください。Safariの0円資産棒の操作も手動確認対象です。常時チェックはChromiumのみとし、他ブラウザはリリース前の手動確認とします。
+
 ## 開発
 
 個人CSVは `csvs/` に置けますが、Gitには登録されません。

@@ -106,13 +106,48 @@ const runAudit = async () => {
     await page.locator("#dashboard").waitFor({ state: "visible" });
     if (!(await page.locator("#demoBadge").isVisible())) throw new Error("デモデータの再取込に失敗しました");
     if (!(await page.locator("#transactions").textContent()).includes("給与")) throw new Error("クリア後の再取込で明細が復元されません");
+
+    // Exercise the real file input using generated, non-personal CSV data.
+    const rows = Array.from({ length: 301 }, (_, index) => `2026-03-${String(index % 28 + 1).padStart(2, "0")},監査明細${index + 1},食費,-100,1`);
+    const syntheticCsv = `日付,内容,大項目,金額,計算対象\n${rows.join("\n")}`;
+    await page.locator("#fileInput").setInputFiles({ name: "ui-audit-synthetic.csv", mimeType: "text/csv", buffer: Buffer.from(syntheticCsv, "utf8") });
+    await page.waitForFunction(() => document.querySelector("#loadSummary")?.textContent.includes("明細 301件"));
+    if ((await page.locator("#expense").textContent()) !== "￥30,100") throw new Error("合成CSVの集計結果が想定と異なります");
+    if ((await page.locator("#transactions tr").count()) !== 300) throw new Error("1ページ目の明細件数が想定と異なります");
+    await page.locator('#transactionPagination [data-page="next"]').click();
+    if ((await page.locator("#transactions tr").count()) !== 1 || !(await page.locator("#transactionPageStatus").textContent()).includes("2 / 2")) throw new Error("明細のページ送りが想定どおりに動作しません");
+    await page.locator("#search").fill("監査明細301");
+    if ((await page.locator("#transactions tr").count()) !== 1) throw new Error("取込後の検索が想定どおりに動作しません");
+    await page.locator("#search").fill("");
+    await page.locator("#monthSelect").selectOption("2026-03");
+    if ((await page.locator("#transactions tr").count()) !== 300) throw new Error("取込後の月指定が想定どおりに動作しません");
+    await page.locator("#monthSelect").selectOption("all");
+    await page.locator("#fileInput").setInputFiles({ name: "ui-audit-reload.csv", mimeType: "text/csv", buffer: Buffer.from("日付,内容,大項目,金額,計算対象\n2026-04-01,再取込,収入,500,1", "utf8") });
+    await page.waitForFunction(() => document.querySelector("#loadSummary")?.textContent.includes("明細 302件"));
+    const cancelledCsv = Buffer.from("日付,内容,大項目,金額,計算対象\n2026-05-01,中止対象,食費,-100,1", "utf8");
+    await page.locator("#fileInput").setInputFiles(Array.from({ length: 20 }, (_, index) => ({
+      name: `ui-audit-cancel-${index + 1}.csv`, mimeType: "text/csv", buffer: cancelledCsv,
+    })));
+    await page.locator("#cancelImport").waitFor({ state: "visible" });
+    await page.locator("#cancelImport").click();
+    await page.locator("#cancelImport").waitFor({ state: "hidden" });
+    if ((await page.locator("#loadSummary").textContent()).includes("明細 322件")) throw new Error("読み込み中止後も後続ファイルが取り込まれました");
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#clearData").click();
+    if (!(await page.locator("#emptyState").isVisible())) throw new Error("実CSV導線のクリアに失敗しました");
     await page.screenshot({ path: "artifacts/ui-audit/desktop.png", fullPage: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "networkidle" });
     await page.screenshot({ path: "artifacts/ui-audit/mobile.png", fullPage: true });
+    await page.locator(".asset-bar").first().click();
+    if (!(await page.locator("#assetDetail").textContent()).includes("普通預金")) throw new Error("モバイル幅で資産内訳が表示されません");
     const widths = await page.evaluate(() => ({ body: document.body.scrollWidth, viewport: window.innerWidth }));
     if (widths.body > widths.viewport + 1) throw new Error(`スマホ幅で横スクロールが発生しています (${widths.body}px > ${widths.viewport}px)`);
+    await page.locator("#emptyFileInput").setInputFiles({ name: "ui-audit-mobile.csv", mimeType: "text/csv", buffer: Buffer.from("日付,内容,大項目,金額,計算対象\n2026-03-01,長い金額確認,食費,-999999999,1", "utf8") });
+    await page.waitForFunction(() => document.querySelector("#loadSummary")?.textContent.includes("明細 1件"));
+    const loadedWidths = await page.evaluate(() => ({ body: document.body.scrollWidth, viewport: window.innerWidth }));
+    if ((await page.locator("#expense").textContent()) !== "￥999,999,999" || loadedWidths.body > loadedWidths.viewport + 1) throw new Error("モバイル幅で長い金額が正しく表示されません");
 
     console.log("UI audit passed. Screenshots: artifacts/ui-audit/");
   } finally {
