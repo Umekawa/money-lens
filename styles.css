@@ -34,7 +34,7 @@ button:focus-visible,select:focus-visible,.search:focus-visible{outline:3px soli
   @page{margin:12mm}
   body{background:#fff;color:#000;font-size:10pt}
   .topbar{padding:0 0 10px;border-bottom:1px solid #888}
-  .topbar .import-actions,.skip-link,footer,.demo-notice,.import-progress,.cancel-import,.import-status,.search-control,.pagination{display:none!important}
+  .import-actions,.skip-link,footer,.demo-notice,.import-progress,.cancel-import,.import-status,.search-control,.pagination,.panel-heading select{display:none!important}
   .container{max-width:none;margin:12px 0;padding:0}
   .summary-grid{grid-template-columns:repeat(4,1fr);gap:8px}
   .card{box-shadow:none;border-color:#aaa;break-inside:avoid}
@@ -47,5 +47,5 @@ button:focus-visible,select:focus-visible,.search:focus-visible{outline:3px soli
   .table-wrap,.monthly-trend-table-wrap{overflow:visible;max-height:none}
   table{width:100%;font-size:9pt}
   tr{break-inside:avoid}
-  .monthly-trend{overflow:visible}
+  .monthly-trend{display:none}
 }
