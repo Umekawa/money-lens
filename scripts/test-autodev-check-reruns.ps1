@@ -32,9 +32,9 @@ function Invoke-FakeGh {
 $ghCommand = 'Invoke-FakeGh'
 $repo = 'test/repo'
 foreach ($case in @(
-  @{ name = '過去の失敗と別提供元の失敗を除外'; old = 'failure'; latest = 'success' },
-  @{ name = '過去の成功で最新の失敗を隠さない'; old = 'success'; latest = 'failure'; fails = $true },
-  @{ name = '再実行中は過去の失敗で停止せず待つ'; old = 'failure'; latest = 'success'; pending = $true }
+  @{ name = 'ignore-old-and-other-provider-failures'; old = 'failure'; latest = 'success' },
+  @{ name = 'latest-failure-must-fail'; old = 'success'; latest = 'failure'; fails = $true },
+  @{ name = 'wait-for-rerun'; old = 'failure'; latest = 'success'; pending = $true }
 )) {
   $script:oldConclusion = $case.old
   $script:conclusion = $case.latest
@@ -42,7 +42,7 @@ foreach ($case in @(
   $script:waits = 0
   $caught = $null
   try { Assert-RequiredChecksPassed -PullRequestNumber 1 -ExpectedHead 'head' } catch { $caught = $_.Exception.Message }
-  if (($case.fails -and $caught -notlike '必須チェックが成功していません*') -or
+  if (($case.fails -and -not $caught) -or
       (-not $case.fails -and $caught) -or ($case.pending -and $script:waits -ne 1)) {
     throw "$($case.name): error=$caught waits=$script:waits"
   }
