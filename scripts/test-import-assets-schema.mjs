@@ -39,6 +39,25 @@ if (!context.importState.importMessages.some((message) => message.includes("合�
   throw new Error("合計列が曖昧な資産CSVを案内できません");
 }
 
+for (const scenario of [
+  {headers:"日付,預金合計,総資産", values:"2026-06-30,100,300", total:300, breakdown:"100"},
+  {headers:"日付,普通預金,預金合計,投資合計", values:"2026-06-30,50,100,200", ambiguous:true},
+  {headers:"日付,合計,預金合計", values:"2026-06-30,300,100", total:300},
+  {headers:"日付,預金合計,合計", values:"2026-06-30,100,300", total:300},
+  {headers:"日付,総資産,預金合計", values:"2026-06-30,300,100", total:300},
+  {headers:"日付,預金合計,総資産", values:"2026-06-30,100,300", total:300},
+  {headers:"日付,純資産,総資産", values:"2026-06-30,200,300", total:300},
+]) {
+  const isolated = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
+  vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state;`, isolated);
+  await isolated.loadFiles([new File([`${scenario.headers}\n${scenario.values}\n`], "合計判定.csv")]);
+  const asset = isolated.importState.assets[0];
+  if (scenario.ambiguous ? isolated.importState.assets.length !== 0 || !isolated.importState.importMessages[0]?.includes("曖昧") :
+      !asset || asset.total !== scenario.total || (scenario.breakdown && asset.breakdown[0].value !== Number(scenario.breakdown))) {
+    throw new Error(`資産合計列の判定に失敗: ${scenario.headers}`);
+  }
+}
+
 for (const totalHeader of ["合計", "総額", "純資産", "総資産", "残高合計"]) {
   const isolated = { File, Map, Math, Set, TextDecoder, Intl, URLSearchParams };
   vm.runInNewContext(`${source}\n;globalThis.loadFiles = load; globalThis.importState = state; globalThis.classifyHeaders = classify;`, isolated);
