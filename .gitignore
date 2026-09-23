@@ -4,6 +4,7 @@
 *.tsv
 *.xlsx
 *.xls
+csv-manifest.json
 
 # 環境変数・秘密情報
 .env
