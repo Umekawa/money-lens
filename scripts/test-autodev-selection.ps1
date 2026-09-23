@@ -39,6 +39,14 @@ $script:issuePages = '[{"number":9,"title":"[P2] later","labels":[]},{"number":2
 $issues = @(Get-SelectedIssue)
 if ($issues.Count -ne 1 -or $issues[0].number -ne 2) { throw 'Issue number tie-break or pull-request exclusion failed.' }
 $selected = Get-SelectedIssue -Number 42
+foreach ($json in @(
+  '[[{"number":9,"title":"[P2] later","labels":[]},{"number":1,"title":"PR","pull_request":{"url":"synthetic"}}],[{"number":8,"title":"[P1] priority","labels":[]}]]',
+  '[[{"number":8,"title":"[P1] priority","labels":[]},{"number":1,"title":"PR","pull_request":{"url":"synthetic"}}]]'
+)) {
+  $script:issuePages = $json
+  $issues = @(Get-SelectedIssue)
+  if ($issues.Count -ne 1 -or $issues[0].number -ne 8) { throw 'Paginated Issue selection failed: a page containing a PR must not hide Issues.' }
+}
 if ($selected.number -ne 42) { throw 'Explicit Issue selection failed.' }
 $script:issueState = 'CLOSED'
 $caught = $null

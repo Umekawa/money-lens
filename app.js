@@ -6,7 +6,7 @@ const demoFiles=[
 const yenFormatter=new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0});
 const yen=n=>Number.isSafeInteger(n)?yenFormatter.format(n):'集計範囲外';
 const text=s=>String(s??'').trim();
-const searchText=s=>String(s??'').toLocaleLowerCase('ja-JP').replace(/\s+/g,' ').trim();
+const searchText=s=>String(s??'').normalize('NFKC').toLocaleLowerCase('ja-JP').replace(/\s+/g,' ').trim();
 function parseAmount(value){let normalized=text(value);if(!normalized)return null;normalized=normalized.replace(/^[¥￥]/,'').replace(/円$/,'');if(!/^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(normalized))return null;const amount=Number(normalized.replace(/,/g,''));return Number.isSafeInteger(amount)?amount:null}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function parseDate(value){const raw=text(value);const match=/^(\d{4})([-/])(\d{1,2})\2(\d{1,2})$/.exec(raw);if(!match)return{date:null,reason:'YYYY-MM-DD または YYYY/M/D 形式ではありません'};const year=Number(match[1]),month=Number(match[3]),day=Number(match[4]);const candidate=new Date(0);candidate.setUTCFullYear(year,month-1,day);if(year<1||candidate.getUTCFullYear()!==year||candidate.getUTCMonth()!==month-1||candidate.getUTCDate()!==day)return{date:null,reason:'実在する暦日ではありません'};return{date:`${match[1]}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`,reason:''}}

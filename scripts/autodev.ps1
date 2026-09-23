@@ -267,8 +267,13 @@ function Get-SelectedIssue {
 
   $issueJson = & $ghCommand api --paginate --slurp "repos/$repo/issues?state=open&per_page=100"
   if ($LASTEXITCODE -ne 0) { throw '開発対象のIssueを取得できませんでした。' }
-  $issuePages = @($issueJson | ConvertFrom-Json)
-  $issues = @($issuePages | ForEach-Object { $_ } | Where-Object { -not $_.pull_request })
+  $issuePages = $issueJson | ConvertFrom-Json -ErrorAction Stop
+  # Windows PowerShell 5.1ではConvertFrom-Jsonの配列展開が7と異なるため、明示的に各ページを展開する。
+  $issues = @(foreach ($page in $issuePages) {
+    foreach ($item in $page) {
+      if (-not $item.pull_request) { $item }
+    }
+  })
   return $issues |
     Sort-Object @{ Expression = { Get-IssuePriority $_ } }, number |
     Select-Object -First 1
@@ -311,6 +316,11 @@ while ($Continuous -or $cycle -lt $Cycles) {
   $issue = $null
   if (-not $PublishCurrentChanges -or $IssueNumber) {
     $issue = Get-SelectedIssue -Number $IssueNumber
+    if ($issue) {
+      Write-Host "既存Issueを選択: #$($issue.number) $($issue.title)" -ForegroundColor Cyan
+    } else {
+      Write-Host '未対応Issueは0件です。改善の自動発見に進みます。' -ForegroundColor Yellow
+    }
   }
   $issueInstruction = if ($issue) {
     @(
