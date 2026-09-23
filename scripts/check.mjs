@@ -35,5 +35,10 @@ execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "
 execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-review.ps1"], { stdio: "inherit" });
 
 execFileSync(process.execPath, ["scripts/test-file-startup.mjs"], { stdio: "inherit" });
+execFileSync(process.execPath, ["scripts/build-pages.mjs"], { stdio: "inherit" });
+const publicApp = await readFile("pages-dist/app.js", "utf8");
+if (!publicApp.includes("const publicDemoEnabled=true;") || publicApp.includes("const publicDemoEnabled=false;")) {
+  throw new Error("公開成果物で公開デモモードが有効になっていません");
+}
 
 console.log("Local checks passed.");
