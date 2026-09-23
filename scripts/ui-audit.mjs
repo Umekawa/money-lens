@@ -124,6 +124,14 @@ const runAudit = async () => {
     await page.locator("#monthSelect").selectOption("all");
     await page.locator("#fileInput").setInputFiles({ name: "ui-audit-reload.csv", mimeType: "text/csv", buffer: Buffer.from("日付,内容,大項目,金額,計算対象\n2026-04-01,再取込,収入,500,1", "utf8") });
     await page.waitForFunction(() => document.querySelector("#loadSummary")?.textContent.includes("明細 302件"));
+    const cancelledCsv = Buffer.from("日付,内容,大項目,金額,計算対象\n2026-05-01,中止対象,食費,-100,1", "utf8");
+    await page.locator("#fileInput").setInputFiles(Array.from({ length: 20 }, (_, index) => ({
+      name: `ui-audit-cancel-${index + 1}.csv`, mimeType: "text/csv", buffer: cancelledCsv,
+    })));
+    await page.locator("#cancelImport").waitFor({ state: "visible" });
+    await page.locator("#cancelImport").click();
+    await page.locator("#cancelImport").waitFor({ state: "hidden" });
+    if ((await page.locator("#loadSummary").textContent()).includes("明細 322件")) throw new Error("読み込み中止後も後続ファイルが取り込まれました");
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#clearData").click();
     if (!(await page.locator("#emptyState").isVisible())) throw new Error("実CSV導線のクリアに失敗しました");
