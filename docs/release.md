@@ -32,6 +32,7 @@ GitHub の Issue・PR・ブランチの push・merge は手作業で行わず、
 $version = "<version>"
 $tag = "v$version"
 $sha = "<mainの完全なSHA>"
+$notesFile = "release-notes-$version.md" # 対応するCHANGELOGの版の本文を保存したファイル
 git fetch origin main --tags
 if ($LASTEXITCODE -ne 0) { throw "git fetch に失敗しました" }
 $mainSha = (git rev-parse origin/main).Trim()
@@ -47,7 +48,7 @@ git tag $tag $sha
 if ($LASTEXITCODE -ne 0) { throw "タグを作成できません" }
 git push origin "refs/tags/$tag"
 if ($LASTEXITCODE -ne 0) { throw "タグをpushできません。既存タグを上書きせず調査してください" }
-gh release create $tag --verify-tag --title $tag --notes-file <版のCHANGELOGから作成した本文ファイル>
+gh release create $tag --verify-tag --title $tag --notes-file $notesFile
 if ($LASTEXITCODE -ne 0) { throw "GitHub Releaseを作成できませんでした。タグは削除せず、同じタグ・SHAで再試行してください" }
 ```
 
