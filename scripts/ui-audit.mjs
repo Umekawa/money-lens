@@ -115,7 +115,14 @@ const runAudit = async () => {
     if ((await page.locator("#expense").textContent()) !== "￥30,100") throw new Error("合成CSVの集計結果が想定と異なります");
     if ((await page.locator("#transactions tr").count()) !== 300) throw new Error("1ページ目の明細件数が想定と異なります");
     await page.locator('#transactionPagination [data-page="next"]').click();
-    if ((await page.locator("#transactions tr").count()) !== 1 || !(await page.locator("#transactionPageStatus").textContent()).includes("2 / 2")) throw new Error("明細のページ送りが想定どおりに動作しません");
+    const pageInput = page.locator('#transactionPagination .page-input');
+    if ((await page.locator("#transactions tr").count()) !== 1 || (await pageInput.inputValue()) !== "2" || (await pageInput.getAttribute("max")) !== "2") throw new Error("明細のページ送りが想定どおりに動作しません");
+    await pageInput.fill("1.5");
+    await pageInput.press("Tab");
+    if ((await pageInput.inputValue()) !== "1" || (await page.locator("#transactions tr").count()) !== 300) throw new Error("小数ページ番号が整数に補正されません");
+    await pageInput.fill("2");
+    await pageInput.press("Tab");
+    if ((await pageInput.inputValue()) !== "2" || (await page.locator("#transactions tr").count()) !== 1) throw new Error("ページ番号の直接入力が反映されません");
     await page.locator("#search").fill("監査明細301");
     if ((await page.locator("#transactions tr").count()) !== 1) throw new Error("取込後の検索が想定どおりに動作しません");
     await page.locator("#search").fill("");
