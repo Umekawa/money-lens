@@ -6,7 +6,7 @@
   [switch]$PublishCurrentChanges,
   [switch]$ResumePullRequest,
   [ValidateNotNullOrEmpty()]
-  [string[]]$RequiredChecks = @(),
+  [string[]]$RequiredChecks = @('check'),
   [ValidateRange(1, 2147483647)]
   [int]$IssueNumber,
   [string]$PublishTitle = '既存変更の整理',
