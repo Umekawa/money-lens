@@ -5,6 +5,8 @@
   [switch]$Continuous,
   [switch]$PublishCurrentChanges,
   [switch]$ResumePullRequest,
+  [ValidateNotNullOrEmpty()]
+  [string[]]$RequiredChecks = @(),
   [ValidateRange(1, 2147483647)]
   [int]$IssueNumber,
   [string]$PublishTitle = '既存変更の整理',
@@ -131,17 +133,22 @@ function Get-PullRequestHeadCommit {
 }
 
 function Get-RequiredCheckNames {
+  $explicitNames = @($RequiredChecks | ForEach-Object { $_.Trim() } | Where-Object { $_ })
   $contextJson = & $ghCommand api "repos/$repo/branches/main/protection/required_status_checks/contexts" 2>$null
-  if ($LASTEXITCODE -ne 0) { throw 'mainブランチの必須チェック設定を取得できませんでした。' }
+  if ($LASTEXITCODE -ne 0) {
+    if ($explicitNames.Count -eq 0) { throw 'mainブランチの必須チェック設定を取得できませんでした。利用できない場合は -RequiredChecks でCIジョブ名を明示してください。' }
+    Write-Host "ブランチ保護設定を取得できないため、明示された必須チェックを使用します: $($explicitNames -join ', ')" -ForegroundColor Yellow
+    return @($explicitNames | Select-Object -Unique)
+  }
   try {
-    $contextData = $contextJson | ConvertFrom-Json
+    $contextData = $contextJson | ConvertFrom-Json -NoEnumerate
   } catch {
     throw 'mainブランチの必須チェック設定を解析できませんでした。'
   }
   # GitHub API returns a string array for this endpoint. Keep accepting the
   # object form as well for GitHub Enterprise/API compatibility.
   $contexts = if ($contextData -is [array]) { @($contextData) } else { @($contextData.contexts) }
-  $names = @($contexts | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+  $names = @(@($contexts) + $explicitNames | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
   if ($names.Count -eq 0) { throw 'mainブランチに必須チェックが登録されていません。' }
   return @($names | Select-Object -Unique)
 }
