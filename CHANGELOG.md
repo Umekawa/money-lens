@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- GitHub Pagesの公開前チェックを必須化し、必要なHTML・CSS・JavaScriptだけを専用成果物へ収集して公開（Issue #71）
 - CSVマニフェストのパスを`csvs/`配下の相対パスに限定し、URL特殊文字を正しく扱うよう修正
 - 自動CSV探索をディレクトリ一覧HTML依存から明示的な`csv-manifest.json`方式へ変更し、マニフェスト・個別CSVの取得失敗を画面に案内（Issue #70）
 - UI監査で匿名デモの集計・検索・月変更・資産内訳・クリア操作を検証し、CIで実行。監査失敗時のIssue登録を`autodev.ps1`経由に統一（Issue #69）

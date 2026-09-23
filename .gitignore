@@ -21,3 +21,4 @@ npm-debug.log*
 
 # UI audit output
 artifacts/
+pages-dist/
