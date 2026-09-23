@@ -382,11 +382,11 @@ while ($Continuous -or $cycle -lt $Cycles) {
       '個人CSV、個人情報、秘密情報は対象外です。'
     ) -join [Environment]::NewLine
     $prTitle = [string]$discovery.title
-    Remove-Item -LiteralPath $discoveryPath -Force
   }
 
   npm run check
   if ($LASTEXITCODE -ne 0) { throw 'Local check failed. The branch was left for investigation.' }
+  if ($discoveryPath) { Remove-Item -LiteralPath $discoveryPath -Force }
 
   if ((git status --porcelain).Length -gt 0) {
     Assert-SafeChanges
