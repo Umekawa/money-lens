@@ -135,10 +135,11 @@ function Get-PullRequestHeadCommit {
 
 function Get-RequiredCheckNames {
   $explicitNames = @($RequiredChecks | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-  $contextJson = & $ghCommand api "repos/$repo/branches/main/protection/required_status_checks/contexts" 2>$null
+  $contextJson = & $ghCommand api "repos/$repo/branches/main/protection/required_status_checks" 2>$null
   if ($LASTEXITCODE -ne 0) {
     if ($explicitNames.Count -eq 0) { throw 'mainブランチの必須チェック設定を取得できませんでした。利用できない場合は -RequiredChecks でCIジョブ名を明示してください。' }
     Write-Host "ブランチ保護設定を取得できないため、明示された必須チェックを使用します: $($explicitNames -join ', ')" -ForegroundColor Yellow
+    $script:RequiredCheckProviders = @($explicitNames | ForEach-Object { [pscustomobject]@{ Name = $_; AppId = $null } })
     return @($explicitNames | Select-Object -Unique)
   }
   try {
@@ -146,14 +147,25 @@ function Get-RequiredCheckNames {
   } catch {
     throw 'mainブランチの必須チェック設定を解析できませんでした。'
   }
-  # GitHub API returns a string array for this endpoint. Keep accepting the
-  # object form as well for GitHub Enterprise/API compatibility.
-  # ConvertFrom-Json in Windows PowerShell 5.1 enumerates a one-item JSON
-  # array, so inspect the JSON shape rather than relying on -NoEnumerate.
-  $contexts = if (([string]$contextJson).TrimStart().StartsWith('[')) { @($contextData) } else { @($contextData.contexts) }
-  $names = @(@($contexts) + $explicitNames | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
-  if ($names.Count -eq 0) { throw 'mainブランチに必須チェックが登録されていません。' }
-  return @($names | Select-Object -Unique)
+  $contexts = @($contextData.contexts)
+  $provided = @($contextData.checks)
+  $names = @($contexts | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+  $requiredChecks = @($provided | Where-Object { $_.context } | ForEach-Object {
+      [pscustomobject]@{ Name = ([string]$_.context).Trim(); AppId = $_.app_id }
+    })
+  foreach ($name in $names) {
+    if (-not @($requiredChecks | Where-Object { $_.Name -eq $name }).Count) {
+      $requiredChecks += [pscustomobject]@{ Name = $name; AppId = $null }
+    }
+  }
+  foreach ($name in $explicitNames) {
+    if (-not @($requiredChecks | Where-Object { $_.Name -eq $name }).Count) {
+      $requiredChecks += [pscustomobject]@{ Name = $name; AppId = $null }
+    }
+  }
+  $script:RequiredCheckProviders = $requiredChecks
+  if ($requiredChecks.Count -eq 0) { throw 'mainブランチに必須チェックが登録されていません。' }
+  return @($requiredChecks | ForEach-Object { $_.Name } | Select-Object -Unique)
 }
 
 function Assert-RequiredChecksPassed {
@@ -166,24 +178,43 @@ function Assert-RequiredChecksPassed {
       throw "必須チェックの待機中にPR #$PullRequestNumber の先端コミットが変わりました。"
     }
 
-    $checkJson = & $ghCommand pr checks $PullRequestNumber --repo $repo --json name,state 2>$null
-    $checks = @()
-    if ($checkJson) { $checks = @($checkJson | ConvertFrom-Json) }
-    $missing = @($requiredNames | Where-Object {
-        $name = $_
-        -not @($checks | Where-Object { $_.name -eq $name }).Count
-      })
+    $checkJson = & $ghCommand pr checks $PullRequestNumber --repo $repo --json name,state,link,workflow 2>$null
+    if ($LASTEXITCODE -notin @(0, 8) -or -not $checkJson) { throw '必須チェックの状態を取得できませんでした。' }
+    try { $checks = @($checkJson | ConvertFrom-Json) } catch { throw '必須チェックの応答を解析できませんでした。' }
+    if (-not $checks.Count -or @($checks | Where-Object { -not $_.name -or -not $_.state }).Count) {
+      throw '必須チェックの応答が空または不完全です。'
+    }
+    $checkRuns = @()
+    if (@($script:RequiredCheckProviders | Where-Object { $_.AppId }).Count) {
+      $runsJson = & $ghCommand api "repos/$repo/commits/$ExpectedHead/check-runs?filter=all&per_page=100" --paginate --slurp 2>$null
+      if ($LASTEXITCODE -ne 0 -or -not $runsJson) { throw 'チェック実行の提供元を取得できませんでした。' }
+      try { $checkRuns = @($runsJson | ConvertFrom-Json | ForEach-Object { $_.check_runs }) } catch { throw 'チェック実行の提供元を解析できませんでした。' }
+      if (-not $checkRuns.Count) { throw 'チェック実行の提供元応答が空です。' }
+    }
+    $missing = @($requiredNames | Where-Object { $name = $_; -not @($checks | Where-Object { $_.name -eq $name }).Count })
     if ($missing.Count -eq 0) {
-      $failed = @($requiredNames | Where-Object {
-          $name = $_
-          @($checks | Where-Object { $_.name -eq $name -and $_.state -eq 'SUCCESS' }).Count -eq 0
-        })
+      $failed = @()
+      $providerFailures = @()
+      foreach ($required in $script:RequiredCheckProviders) {
+        $matching = @($checks | Where-Object { $_.name -eq $required.Name })
+        if ($required.AppId) {
+          # 再実行前の履歴ではなく、同じ名前・提供元の最新実行IDを評価する。
+          $matchingRuns = @($checkRuns | Where-Object { $_.name -eq $required.Name -and $_.app.id -eq $required.AppId } |
+            Sort-Object -Property @{ Expression = { [long]$_.id }; Descending = $true } | Select-Object -First 1)
+          if (-not $matchingRuns.Count -or @($matchingRuns | Where-Object { $_.status -ne 'completed' -or $_.conclusion -ne 'success' }).Count) { $failed += $required.Name }
+          if (@($matchingRuns | Where-Object { $_.status -eq 'completed' -and $_.conclusion -ne 'success' }).Count) { $providerFailures += $required.Name }
+          continue
+        }
+        if (-not $matching.Count -or @($matching | Where-Object { $_.state -ne 'SUCCESS' }).Count) { $failed += $required.Name }
+      }
       if ($failed.Count -eq 0) { $checksReady = $true; break }
       $terminalFailure = @($checks | Where-Object {
-          $_.name -in $requiredNames -and $_.state -in @('FAILURE', 'CANCELLED', 'SKIPPED', 'STARTUP_FAILURE', 'TIMED_OUT', 'ERROR')
+          $checkName = $_.name
+          $hasProvider = @($script:RequiredCheckProviders | Where-Object { $_.Name -eq $checkName -and $_.AppId }).Count
+          -not $hasProvider -and $checkName -in $failed -and $_.state -in @('FAILURE', 'CANCELLED', 'SKIPPED', 'STARTUP_FAILURE', 'TIMED_OUT', 'ERROR')
         })
-      if ($terminalFailure.Count -gt 0) {
-        throw "必須チェックが成功していません: $($terminalFailure.name -join ', ')"
+      if ($terminalFailure.Count -gt 0 -or $providerFailures.Count -gt 0) {
+        throw "必須チェックが成功していません: $(@($terminalFailure.name) + $providerFailures -join ', ')"
       }
     }
     Write-Host 'GitHub Actionsの必須チェックを同じコミットで待っています...' -ForegroundColor Yellow
