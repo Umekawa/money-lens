@@ -93,8 +93,8 @@ $reviewPrompt = @(
   'Fix any concrete correctness, security, accessibility, privacy, or regression problems you find.',
   'Keep the change narrowly scoped to the selected Issue or improvement.',
   'Run npm run check after any fix. Do not commit, push, merge, close Issues, or change repository visibility.',
-  'If the change is sound, finish your response with exactly REVIEW_PASS.',
-  'If you cannot fix a concrete problem, finish with exactly REVIEW_FAIL and explain the remaining problem.'
+  'Explain your findings first. If the change is sound, put exactly REVIEW_PASS on its own final line.',
+  'If you cannot fix a concrete problem, explain it first and put exactly REVIEW_FAIL on its own final line.'
 )
 
 function Assert-SafeChanges {
@@ -436,7 +436,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
     $reviewLines = @($plainReviewOutput -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     $finalReviewMarker = if ($reviewLines.Count) { $reviewLines[-1] } else { '' }
     # ツール出力や回帰テストに含まれる途中のマーカーではなく、指示した最終行を採用する。
-    if ($reviewExitCode -eq 0 -and $finalReviewMarker -ceq 'REVIEW_PASS') {
+    if ($reviewExitCode -eq 0 -and $finalReviewMarker -cmatch '(^|\s)REVIEW_PASS$' -and $finalReviewMarker -notmatch '\bREVIEW_FAIL\b') {
       # A reviewer may have left a fix uncommitted. Publish it and require a
       # fresh review so that code added after the pass is never merged unseen.
       if ($reviewChanged) {
