@@ -376,8 +376,8 @@ while ($Continuous -or $cycle -lt $Cycles) {
     $plainReviewOutput = $reviewOutput -replace '\x1B\[[0-?]*[ -/]*[@-~]', ''
     $reviewLines = @($plainReviewOutput -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     $finalReviewMarker = if ($reviewLines.Count) { $reviewLines[-1] } else { '' }
-    $hasReviewFailure = $reviewLines -contains 'REVIEW_FAIL'
-    if ($reviewExitCode -eq 0 -and $finalReviewMarker -ceq 'REVIEW_PASS' -and -not $hasReviewFailure) {
+    # ツール出力や回帰テストに含まれる途中のマーカーではなく、指示した最終行を採用する。
+    if ($reviewExitCode -eq 0 -and $finalReviewMarker -ceq 'REVIEW_PASS') {
       # A reviewer may have left a fix uncommitted. Publish it and require a
       # fresh review so that code added after the pass is never merged unseen.
       if ($reviewChanged) {
@@ -401,7 +401,7 @@ while ($Continuous -or $cycle -lt $Cycles) {
       $reviewPassed = $true
       break
     }
-    Write-Host "レビュー判定不成立: 終了コード=$reviewExitCode、最終行=[$finalReviewMarker]、REVIEW_FAILあり=$hasReviewFailure" -ForegroundColor Yellow
+    Write-Host "レビュー判定不成立: 終了コード=$reviewExitCode、最終行=[$finalReviewMarker]" -ForegroundColor Yellow
     if ($reviewAttempt -lt $ReviewAttempts) {
       Write-Host 'レビューで問題が見つかったため、修正後に再レビューします。' -ForegroundColor Yellow
       Publish-LocalChanges -Branch $branch -CommitMessage 'レビュー指摘を反映'

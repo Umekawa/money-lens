@@ -49,10 +49,11 @@ function Invoke-FakeReview {
 
 $cases = @(
   @{ name = 'ANSI装飾付きで合格'; steps = @(@{ result = "$([char]27)[32mREVIEW_PASS$([char]27)[0m`n$([char]27)[0m" }); calls = 1; passed = $true; published = 1 },
-  @{ name = 'ANSI装飾付きFAILも拒否'; steps = @(@{ result = "$([char]27)[31mREVIEW_FAIL$([char]27)[0m`nREVIEW_PASS" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
+  @{ name = 'ANSI装飾付き最終FAILを拒否'; steps = @(@{ result = "REVIEW_PASS`n$([char]27)[31mREVIEW_FAIL$([char]27)[0m" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
   @{ name = '変更なしで合格'; steps = @(@{ result = 'REVIEW_PASS' }); calls = 1; passed = $true; published = 1 },
   @{ name = '途中PASSの後に最終FAIL'; steps = @(@{ result = "REVIEW_PASS`n指摘が残っています`nREVIEW_FAIL" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
-  @{ name = 'PASSの後に矛盾するFAIL'; steps = @(@{ result = "REVIEW_FAIL`nREVIEW_PASS" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
+  @{ name = '途中のテスト出力FAILと最終PASS'; steps = @(@{ result = "テスト出力:`nREVIEW_FAIL`nテスト成功`nREVIEW_PASS" }); calls = 1; passed = $true; published = 1 },
+  @{ name = 'PASS後に説明がある場合は拒否'; steps = @(@{ result = "REVIEW_PASS`n指摘が残っています" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
   @{ name = 'マーカーなし'; steps = @(@{ result = '問題ありません。' }, @{ result = '問題ありません。' }); calls = 2; passed = $false; published = 1 },
   @{ name = '実行失敗'; steps = @(@{ result = 'REVIEW_PASS'; exitCode = 1 }, @{ result = 'REVIEW_PASS'; exitCode = 1 }); calls = 2; passed = $false; published = 1 },
   @{ name = '最終修正後の確認で合格'; steps = @(@{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS' }); calls = 3; passed = $true; published = 3 },
