@@ -49,6 +49,8 @@ python -m http.server 8765 --bind 127.0.0.1
 
 ローカルチェック：
 
+自動開発スクリプトの構文・回帰テストを含むため、PowerShell 7 (`pwsh`) または Windows PowerShell 5.1 が必要です。
+
 ```powershell
 npm run check
 ```
