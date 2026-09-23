@@ -33,14 +33,25 @@ $version = "<version>"
 $tag = "v$version"
 $sha = "<mainの完全なSHA>"
 git fetch origin main --tags
-git rev-parse origin/main
-git show "${tag}^{commit}"
+if ($LASTEXITCODE -ne 0) { throw "git fetch に失敗しました" }
+$mainSha = (git rev-parse origin/main).Trim()
+if ($LASTEXITCODE -ne 0) { throw "origin/main のSHAを取得できません" }
+if ($mainSha -ne $sha) { throw "対象SHAがorigin/mainと一致しません" }
+$localTag = git show-ref --verify --quiet "refs/tags/$tag"
+if ($LASTEXITCODE -eq 0) { throw "ローカルにタグが既にあります。調査して中止してください" }
+if ($LASTEXITCODE -ne 1) { throw "ローカルタグを確認できません" }
+$remoteTag = git ls-remote --tags origin "refs/tags/$tag"
+if ($LASTEXITCODE -ne 0) { throw "リモートタグを確認できません" }
+if ($remoteTag) { throw "リモートにタグが既にあります。調査して中止してください" }
 git tag $tag $sha
+if ($LASTEXITCODE -ne 0) { throw "タグを作成できません" }
 git push origin "refs/tags/$tag"
+if ($LASTEXITCODE -ne 0) { throw "タグをpushできません。既存タグを上書きせず調査してください" }
 gh release create $tag --verify-tag --title $tag --notes-file <版のCHANGELOGから作成した本文ファイル>
+if ($LASTEXITCODE -ne 0) { throw "GitHub Releaseを作成できませんでした。タグは削除せず、同じタグ・SHAで再試行してください" }
 ```
 
-タグが既に存在する場合、`git show` は調査時に限り実行し、その後の作成・pushへ進まない。Release作成に失敗した場合はタグを削除せず、同一タグ・同一SHAで管理者が `gh release create ... --verify-tag` を再試行する。Pagesは `main` のpushでのみデプロイされ、タグpushでは更新されないため、リリース版とPages公開版は、タグ対象SHAと成功したPagesデプロイのSHAが一致するときに限り同一版とみなす。いずれかが未確認なら候補/公開版との対応は未確認として扱い、Release本文や案内で公開済みと表記しない。
+タグが既に存在する場合はコマンドを続けず、`git show "${tag}^{commit}"` などで指すSHAとReleaseを調査する。Release作成に失敗した場合はタグを削除せず、同一タグ・同一SHAで管理者が `gh release create ... --verify-tag` を再試行する。Pagesは `main` のpushでのみデプロイされ、タグpushでは更新されないため、リリース版とPages公開版は、タグ対象SHAと成功したPagesデプロイのSHAが一致するときに限り同一版とみなす。いずれかが未確認なら候補/公開版との対応は未確認として扱い、Release本文や案内で公開済みと表記しない。
 
 ## 失敗時の扱い
 
