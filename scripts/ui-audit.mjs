@@ -1,29 +1,58 @@
-import { execFileSync, spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { chromium } from "playwright";
 
-const port = 8765;
-const baseUrl = `http://127.0.0.1:${port}/?demo=1`;
 const createIssue = process.argv.includes("--create-issue");
-const server = spawn("python", ["-m", "http.server", String(port), "--bind", "127.0.0.1"], { stdio: "ignore", windowsHide: true });
-let serverExit;
-server.once("exit", (code, signal) => { serverExit = `ローカルサーバーが終了しました (${code ?? signal})`; });
+const allowedFiles = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/styles.css", "styles.css"], ["/app.js", "app.js"]]);
+const serverToken = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let server;
+let baseUrl;
+
+const startServer = async () => {
+  const files = new Map(await Promise.all([...new Set(allowedFiles.values())].map(async file => [file, await readFile(file)])));
+  server = createServer((request, response) => {
+    const pathname = new URL(request.url, "http://127.0.0.1").pathname;
+    if (pathname === "/__ui_audit_health") {
+      response.writeHead(request.headers["x-ui-audit-token"] === serverToken ? 204 : 404, { "Cache-Control": "no-store" });
+      response.end();
+      return;
+    }
+    const file = allowedFiles.get(pathname);
+    if (!file || !["GET", "HEAD"].includes(request.method)) {
+      response.writeHead(404, { "Cache-Control": "no-store" });
+      response.end();
+      return;
+    }
+    const type = file.endsWith(".html") ? "text/html; charset=utf-8" : file.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
+    response.writeHead(200, { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+    response.end(request.method === "HEAD" ? undefined : files.get(file));
+  });
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("ローカルサーバーの起動がタイムアウトしました")), 5000);
+    server.once("error", error => { clearTimeout(timeout); reject(new Error(`ローカルサーバーを起動できませんでした: ${error.message}`)); });
+    server.listen(0, "127.0.0.1", () => { clearTimeout(timeout); resolve(); });
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("ローカルサーバーのポートを取得できませんでした");
+  baseUrl = `http://127.0.0.1:${address.port}/?demo=1`;
+};
 
 const waitForServer = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    if (serverExit) throw new Error(serverExit);
+  for (let attempt = 0; attempt < 25; attempt += 1) {
     try {
-      if ((await fetch(baseUrl)).ok) return;
+      const response = await fetch(new URL("/__ui_audit_health", baseUrl), { headers: { "X-UI-Audit-Token": serverToken }, signal: AbortSignal.timeout(500) });
+      if (response.status === 204) return;
     } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
-  throw new Error("ローカルサーバーを起動できませんでした");
+  throw new Error("自分のローカルサーバーを確認できませんでした（タイムアウト）");
 };
 
 const runAudit = async () => {
   let browser;
   try {
+    await startServer();
     await waitForServer();
     await mkdir("artifacts/ui-audit", { recursive: true });
     browser = await chromium.launch({ headless: true });
@@ -85,8 +114,11 @@ const runAudit = async () => {
 
     console.log("UI audit passed. Screenshots: artifacts/ui-audit/");
   } finally {
-    await browser?.close();
-    server.kill();
+    try {
+      await browser?.close();
+    } finally {
+      if (server?.listening) await new Promise(resolve => server.close(resolve));
+    }
   }
 };
 
@@ -101,7 +133,7 @@ try {
       "",
       "## 実行結果",
       `- ${error.message}`,
-      "- URL: http://127.0.0.1:8765/?demo=1",
+      `- URL: ${baseUrl ?? "ローカルサーバー起動前"}`,
       "- スクリーンショット: artifacts/ui-audit/",
       "",
       "## 注意",
