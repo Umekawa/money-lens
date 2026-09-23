@@ -18,9 +18,17 @@ const context = {
 vm.runInNewContext(`${source}\n;globalThis.readManifest = loadCsvManifest;`, context);
 
 const files = await context.readManifest();
-if (files.length !== 2 || files[0].url !== "csvs/収支/2026.csv" || files[1].name !== "資産.csv") {
+if (files.length !== 2 || decodeURIComponent(files[0].url) !== "csvs/収支/2026.csv" || files[1].name !== "資産.csv") {
   throw new Error("CSVマニフェストから相対パスを解決できません");
 }
+
+responses.set("csv-manifest.json", { ok: true, json: async () => ({ files: ["../秘密.csv"] }) });
+await context.readManifest().then(
+  () => { throw new Error("CSVディレクトリ外のパスを許可しています"); },
+  error => {
+    if (!error.message.includes("csvs/ 配下")) throw error;
+  },
+);
 
 responses.set("csv-manifest.json", { ok: false });
 await context.readManifest().then(
