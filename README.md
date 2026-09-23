@@ -53,6 +53,15 @@ python -m http.server 8765 --bind 127.0.0.1
 npm run check
 ```
 
+個人データを使わずにUI監査を実行する場合は、Playwright用Chromiumを準備して次を実行します。監査サーバーは空きポートでループバックにのみ起動し、`index.html`・`styles.css`・`app.js` だけを配信します。
+
+```powershell
+npx playwright install chromium
+npm run ui:audit
+```
+
+結果とスクリーンショットは `artifacts/ui-audit/` に保存されます。
+
 大量データ時の調査を再実行する場合は、Chromiumを準備して次を実行します。合成CSVだけを使い、取込・検索・中止・保持メモリを測定します。
 
 ```powershell
