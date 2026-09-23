@@ -30,3 +30,23 @@
 .asset-detail{margin-top:10px;padding:10px 12px;background:#f5f8f8;border-radius:8px;font-size:12px}.asset-detail dl{margin:6px 0 8px}.asset-detail dl div{display:flex;justify-content:space-between;gap:12px}.asset-detail dt,.asset-detail dd{margin:0}.asset-detail dd{font-weight:700}.asset-month-button{padding:6px 9px;font-size:11px;border:0}.asset-bar{border:0;padding:0}
  .trend-legend{flex-wrap:wrap}.trend-month{flex-basis:86px;min-width:86px}.trend-item{min-width:20px}.trend-track{position:relative;height:calc(100% - 32px);border-radius:4px}.trend-zero-line{position:absolute;top:50%;left:0;right:0;width:auto;height:0;border-top:1px solid #87969c;pointer-events:none;overflow:visible}.trend-bar{position:absolute;bottom:50%;width:100%;border-radius:4px 4px 0 0}.trend-bar[style*="top:50%"]{border-radius:0 0 4px 4px}.balance-positive{background:#6b91c2}.balance-negative{background:#c45d67}.trend-value{max-width:100%;overflow-wrap:anywhere;color:#66747d;font-size:10px;line-height:1.2;text-align:center;white-space:normal}
 button:focus-visible,select:focus-visible,.search:focus-visible{outline:3px solid #204f4a;outline-offset:2px}
+@media print{
+  @page{margin:12mm}
+  body{background:#fff;color:#000;font-size:10pt}
+  .topbar{padding:0 0 10px;border-bottom:1px solid #888}
+  .import-actions,.skip-link,footer,.demo-notice,.import-progress,.cancel-import,.import-status,.search-control,.panel-heading select{display:none!important}
+  .pagination button{display:none}
+  .container{max-width:none;margin:12px 0;padding:0}
+  .summary-grid{grid-template-columns:repeat(4,1fr);gap:8px}
+  .card{box-shadow:none;border-color:#aaa;break-inside:avoid}
+  .metric{padding:10px}
+  .metric strong{font-size:18px}
+  .metric.accent{background:#fff;color:#000}
+  .metric.accent span,.metric.accent small{color:#333}
+  .grid-2{grid-template-columns:1fr 1fr;gap:8px}
+  .panel{padding:12px}
+  .table-wrap,.monthly-trend-table-wrap{overflow:visible;max-height:none}
+  table{width:100%;font-size:9pt}
+  tr{break-inside:avoid}
+  .monthly-trend{display:none}
+}
