@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 資産グラフの棒をキーボードで選択した際、フォーカス位置が分かるアウトラインを表示
 - CIで取得不能な`microsoft/setup-powershell`を削除し、Ubuntuランナーに導入済みのPowerShellを起動確認して使用
 - 自動開発スクリプトの構文・Issue選択・公開対象除外テストを標準チェックとCIに統合し、CIにPowerShell環境を追加（Issue #163）
 - GitHub Actions 必須チェックの待機上限を `-CheckTimeoutMinutes` で設定可能にし、既定30分までpending/キュー状態を待機、確定失敗は即時終了する回帰確認を追加（Issue #162）
