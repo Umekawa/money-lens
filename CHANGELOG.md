@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- AIレビューは終了コード0かつ最終行が正確なREVIEW_PASSで、REVIEW_FAILを含まない場合のみ合格とし、途中PASS・矛盾・マーカーなし・実行失敗の回帰テストを追加（Issue #160）
 - ローカルチェックのPowerShell呼び出しをOSに応じて切り替え、UbuntuのCIで`powershell`が見つからず失敗する問題を修正
 - 個人用`csv-manifest.json`をGit除外・公開前検査の対象とし、匿名の公開用雛形と合成パスの回帰確認を追加（Issue #157）
 - ブランチ保護設定APIを利用できない環境でも、既定でCIジョブ`check`の成功を確認して自動開発を継続

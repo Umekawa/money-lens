@@ -1,4 +1,4 @@
-# 外部サービスや実リポジトリを変更せず、実際のレビューループを検証する。
+﻿# 外部サービスや実リポジトリを変更せず、実際のレビューループを検証する。
 $ErrorActionPreference = 'Stop'
 $tokens = $null
 $parseErrors = $null
@@ -43,12 +43,16 @@ function Invoke-FakeReview {
   $script:calls++
   $script:dirty = [bool]$step.dirty
   if ($step.commit) { $script:head += 'x' }
-  $global:LASTEXITCODE = 0
+  $global:LASTEXITCODE = if ($null -ne $step.exitCode) { [int]$step.exitCode } else { 0 }
   $step.result
 }
 
 $cases = @(
   @{ name = '変更なしで合格'; steps = @(@{ result = 'REVIEW_PASS' }); calls = 1; passed = $true; published = 1 },
+  @{ name = '途中PASSの後に最終FAIL'; steps = @(@{ result = "REVIEW_PASS`n指摘が残っています`nREVIEW_FAIL" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
+  @{ name = 'PASSの後に矛盾するFAIL'; steps = @(@{ result = "REVIEW_FAIL`nREVIEW_PASS" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
+  @{ name = 'マーカーなし'; steps = @(@{ result = '問題ありません。' }, @{ result = '問題ありません。' }); calls = 2; passed = $false; published = 1 },
+  @{ name = '実行失敗'; steps = @(@{ result = 'REVIEW_PASS'; exitCode = 1 }, @{ result = 'REVIEW_PASS'; exitCode = 1 }); calls = 2; passed = $false; published = 1 },
   @{ name = '最終修正後の確認で合格'; steps = @(@{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS' }); calls = 3; passed = $true; published = 3 },
   @{ name = '確認レビューが不合格'; steps = @(@{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_FAIL' }); calls = 3; passed = $false; published = 2 },
   @{ name = '確認レビューで再修正'; steps = @(@{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS'; dirty = $true }); calls = 3; passed = $false; published = 2; error = '最終確認レビューで変更*' },
