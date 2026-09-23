@@ -10,6 +10,7 @@ if (valid.date !== "2026-02-03") throw new Error("スラッシュ区切りの日
 for (const value of ["2024-02-29", "2024/2/29"]) {
   if (context.parseDateValue(value).date !== "2024-02-29") throw new Error("閏日を取り込めません");
 }
+if (context.parseDateValue("0001-01-01").date !== "0001-01-01") throw new Error("西暦1年の日付を正しく取り込めません");
 for (const value of ["2023-02-29", "2026-99-99", "2026/02-03", "not-a-date"]) {
   if (context.parseDateValue(value).date !== null) throw new Error(`不正な日付を受け入れました: ${value}`);
 }
