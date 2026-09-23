@@ -48,6 +48,10 @@ function Invoke-FakeReview {
 }
 
 $cases = @(
+  @{ name = '説明文末のPASSも合格'; steps = @(@{ result = '`npm run check` passed. REVIEW_PASS' }); calls = 1; passed = $true; published = 1 },
+  @{ name = '説明文末のPASSで修正後も再レビュー'; steps = @(@{ result = 'Fixed. REVIEW_PASS'; dirty = $true }, @{ result = 'REVIEW_PASS' }); calls = 2; passed = $true; published = 2 },
+  @{ name = '同じ最終行にFAILとPASSがある場合は拒否'; steps = @(@{ result = 'REVIEW_FAIL REVIEW_PASS' }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
+  @{ name = 'マーカー後に説明が続く場合は拒否'; steps = @(@{ result = 'REVIEW_PASS but unresolved' }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
   @{ name = 'ANSI装飾付きで合格'; steps = @(@{ result = "$([char]27)[32mREVIEW_PASS$([char]27)[0m`n$([char]27)[0m" }); calls = 1; passed = $true; published = 1 },
   @{ name = 'ANSI装飾付き最終FAILを拒否'; steps = @(@{ result = "REVIEW_PASS`n$([char]27)[31mREVIEW_FAIL$([char]27)[0m" }, @{ result = 'REVIEW_FAIL' }); calls = 2; passed = $false; published = 1 },
   @{ name = '変更なしで合格'; steps = @(@{ result = 'REVIEW_PASS' }); calls = 1; passed = $true; published = 1 },
