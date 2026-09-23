@@ -138,7 +138,8 @@ const runAudit = async () => {
     if (widths.body > widths.viewport + 1) throw new Error(`スマホ幅で横スクロールが発生しています (${widths.body}px > ${widths.viewport}px)`);
     await page.locator("#emptyFileInput").setInputFiles({ name: "ui-audit-mobile.csv", mimeType: "text/csv", buffer: Buffer.from("日付,内容,大項目,金額,計算対象\n2026-03-01,長い金額確認,食費,-999999999,1", "utf8") });
     await page.waitForFunction(() => document.querySelector("#loadSummary")?.textContent.includes("明細 1件"));
-    if ((await page.locator("#expense").textContent()) !== "￥999,999,999" || widths.body > widths.viewport + 1) throw new Error("モバイル幅で長い金額が正しく表示されません");
+    const loadedWidths = await page.evaluate(() => ({ body: document.body.scrollWidth, viewport: window.innerWidth }));
+    if ((await page.locator("#expense").textContent()) !== "￥999,999,999" || loadedWidths.body > loadedWidths.viewport + 1) throw new Error("モバイル幅で長い金額が正しく表示されません");
 
     console.log("UI audit passed. Screenshots: artifacts/ui-audit/");
   } finally {
