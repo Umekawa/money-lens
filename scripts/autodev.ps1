@@ -267,7 +267,7 @@ function Get-SelectedIssue {
 
   $issueJson = & $ghCommand api --paginate --slurp "repos/$repo/issues?state=open&per_page=100"
   if ($LASTEXITCODE -ne 0) { throw '開発対象のIssueを取得できませんでした。' }
-  $issuePages = @($issueJson | ConvertFrom-Json)
+  $issuePages = $issueJson | ConvertFrom-Json -ErrorAction Stop
   # Windows PowerShell 5.1ではConvertFrom-Jsonの配列展開が7と異なるため、明示的に各ページを展開する。
   $issues = @(foreach ($page in $issuePages) {
     foreach ($item in $page) {
