@@ -30,12 +30,11 @@ execFileSync(process.execPath, ["scripts/test-folder-file-filter.mjs"], { stdio:
 execFileSync(process.execPath, ["scripts/test-demo-mode.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-progress.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-auto-discovery.mjs"], { stdio: "inherit" });
-const powershell = process.platform === "win32" ? "powershell" : "pwsh";
-execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-safe-changes.ps1"], { stdio: "inherit" });
-execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-review.ps1"], { stdio: "inherit" });
-execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-required-checks.ps1"], { stdio: "inherit" });
-execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-check-reruns.ps1"], { stdio: "inherit" });
-execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/test-autodev-selection.ps1"], { stdio: "inherit" });
+for (const test of ["safe-changes", "review", "required-checks", "check-reruns", "selection"]) {
+  execFileSync("pwsh", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+    `$OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); & './scripts/test-autodev-${test}.ps1'`,
+  ], { stdio: "inherit" });
+}
 
 execFileSync(process.execPath, ["scripts/test-file-startup.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/build-pages.mjs"], { stdio: "inherit" });
