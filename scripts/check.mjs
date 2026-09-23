@@ -44,4 +44,6 @@ if (!publicApp.includes("const publicDemoEnabled=true;") || publicApp.includes("
   throw new Error("公開成果物で公開デモモードが有効になっていません");
 }
 
+execFileSync(process.execPath, ["scripts/test-print-transactions.mjs"], { stdio: "inherit" });
+
 console.log("Local checks passed.");
