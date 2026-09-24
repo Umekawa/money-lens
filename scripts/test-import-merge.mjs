@@ -16,9 +16,18 @@ if (mergedTransactions.length !== 3 || mergedTransactions[2] !== added) {
 const idA = { ...first, id: "a" };
 const idB = { ...first, id: "b" };
 const correctedA = { ...idA, amount: -150, category: "日用品" };
-const idMerged = context.mergeTransactions([idA], [idB, correctedA]);
+const transactionCounts = { added: 0, updated: 0, unchanged: 0 };
+const idMerged = context.mergeTransactions([idA], [idB, correctedA], transactionCounts);
 if (idMerged.length !== 2 || idMerged[0].amount !== -150 || idMerged[0].category !== "日用品" || idMerged[1].id !== "b") {
   throw new Error("IDが異なる正当な同額明細を保持し、同一IDの訂正版へ置換できません");
+}
+if (transactionCounts.added !== 1 || transactionCounts.updated !== 1 || transactionCounts.unchanged !== 0) {
+  throw new Error("新規明細と訂正版の件数を正しく計数できません");
+}
+const unchangedCounts = { added: 0, updated: 0, unchanged: 0 };
+context.mergeTransactions([idA], [{ ...idA }], unchangedCounts);
+if (unchangedCounts.added !== 0 || unchangedCounts.updated !== 0 || unchangedCounts.unchanged !== 1) {
+  throw new Error("同一ID・同一内容を変更なしとして計数できません");
 }
 
 const excludedA = context.mergeTransactions([idA, idB], [{ id: "a", excluded: true }]);
