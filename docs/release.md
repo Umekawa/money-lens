@@ -22,7 +22,7 @@
 7. リポジトリ管理者がリリース承認を得た後、以下の「タグとReleaseの実行経路」に従ってタグを作成・pushする。
 8. 同じタグからGitHub Releaseを作成し、本文には対応するCHANGELOGの版の内容を転記する。
 
-GitHub の Issue・PR・ブランチの push・merge は手作業で行わず、`scripts/autodev.ps1` が提供するレビュー・公開フロー経由で行う。タグ/Releaseは現行スクリプトの対象外であり、以下の手順に限り、承認済みリリースを担当するリポジトリ管理者がGitHub CLIで実施する。リリース対象の変更を公開する場合は、リリース作業だけであっても `-PublishCurrentChanges` などの既存変更公開モードでレビューを通す。
+GitHub の Issue・PR・ブランチの push・merge は、管理者がローカル保管する `.local-dev/autodev.ps1` のレビュー・公開フロー経由で行う。`.local-dev/` はGit除外対象で、公開リポジトリには含まれない。タグ/Releaseは現行スクリプトの対象外であり、以下の手順に限り、承認済みリリースを担当するリポジトリ管理者がGitHub CLIで実施する。リリース対象の変更を公開する場合は、リリース作業だけであっても `-PublishCurrentChanges` などの既存変更公開モードでレビューを通す。
 
 ## タグとReleaseの実行経路
 

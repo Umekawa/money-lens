@@ -31,12 +31,6 @@ execFileSync(process.execPath, ["scripts/test-folder-file-filter.mjs"], { stdio:
 execFileSync(process.execPath, ["scripts/test-demo-mode.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-progress.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-auto-discovery.mjs"], { stdio: "inherit" });
-for (const test of ["safe-changes", "review", "required-checks", "check-reruns", "selection", "discovery-record"]) {
-  execFileSync("pwsh", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
-    `$OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); & './scripts/test-autodev-${test}.ps1'`,
-  ], { stdio: "inherit" });
-}
-
 execFileSync(process.execPath, ["scripts/test-file-startup.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/build-pages.mjs"], { stdio: "inherit" });
 const publicApp = await readFile("pages-dist/app.js", "utf8");

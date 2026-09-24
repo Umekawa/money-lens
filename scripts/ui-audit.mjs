@@ -1,9 +1,10 @@
-import { execFileSync } from "node:child_process";
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { readFile, mkdir } from "node:fs/promises";
 import { createServer } from "node:http";
 import { chromium } from "playwright";
 
-const createIssue = process.argv.includes("--create-issue");
+if (process.argv.includes("--create-issue")) {
+  throw new Error("Issue登録は管理者のローカル専用ツールで行ってください。UI監査は npm run ui:audit で実行できます。");
+}
 const allowedFiles = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/styles.css", "styles.css"], ["/app.js", "app.js"]]);
 const serverToken = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let server;
@@ -212,28 +213,5 @@ try {
   await runAudit();
 } catch (error) {
   console.error(`UI監査失敗: ${error.message}`);
-  if (createIssue) {
-    const body = [
-      "## 概要",
-      "匿名デモをPlaywrightで操作するUI監査で問題を検出しました。",
-      "",
-      "## 実行結果",
-      `- ${error.message}`,
-      `- URL: ${baseUrl ?? "ローカルサーバー起動前"}`,
-      "- スクリーンショット: artifacts/ui-audit/",
-      "",
-      "## 注意",
-      "個人CSV、金額、口座名などの個人情報は含めていません。",
-    ].join("\n");
-    try {
-      const issueBatchPath = "artifacts/ui-audit/issue-batch.json";
-      await writeFile(issueBatchPath, JSON.stringify([{ title: "UI監査で問題を検出", body }]), "utf8");
-      const wrapper = process.platform === "win32" ? "pwsh.exe" : "pwsh";
-      execFileSync(wrapper, ["-File", "scripts/autodev.ps1", "-IssueBatchPath", issueBatchPath], { stdio: "inherit" });
-      console.log("autodev.ps1 経由でIssue登録を依頼しました");
-    } catch (issueError) {
-      console.error(`Issue作成に失敗しました: ${issueError.message}`);
-    }
-  }
   process.exitCode = 1;
 }
