@@ -93,6 +93,23 @@ const runAudit = async () => {
     await asset.focus();
     await asset.press("Enter");
     if (!(await page.locator("#assetDetail").textContent()).includes("普通預金")) throw new Error("資産内訳が表示されません");
+    for (const width of [1280, 820, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const bar = page.locator(".asset-bar").first();
+      await bar.hover();
+      const detail = page.locator("#assetDetail");
+      const bounds = await detail.boundingBox();
+      const plot = await page.locator(".asset-plot").boundingBox();
+      if (!bounds || bounds.x < 0 || bounds.x + bounds.width > width || bounds.y < plot.y + plot.height - 1) throw new Error("資産内訳が" + width + "px幅でグラフ直下・画面内に配置されません");
+      await bar.focus();
+      if (!(await detail.isVisible())) throw new Error("フォーカスで資産内訳を開けません");
+      await bar.press("Escape");
+      if (await detail.isVisible()) throw new Error("Escapeで資産内訳が閉じません");
+      await bar.click();
+      await page.locator(".asset-detail-close").click();
+      if (await detail.isVisible()) throw new Error("閉じる操作で資産内訳が閉じません");
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
 
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#clearData").click();
