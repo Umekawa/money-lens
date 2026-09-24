@@ -41,4 +41,28 @@ if (!context.importState.importMessages.some((message) => message.includes("大�
   throw new Error("大小文字だけが異なる識別ヘッダーの重複を検出できません");
 }
 
+const idCsv = (content, category, amount) => new File(
+  [`日付,内容,カテゴリ,金額,id\n2026-04-01,${content},${category},${amount},a`],
+  `${content}.csv`,
+);
+const fileA = idCsv("店", "食費", -100);
+const fileB = idCsv("更新店", "日用品", -200);
+await context.loadFiles([fileA, idCsv("店B", "食費", -200), fileA]);
+const corrected = context.importState.transactions.filter((transaction) => transaction.date === "2026-04-01");
+if (corrected.length !== 1 || corrected[0].amount !== -100 || corrected[0].content !== "店" || corrected[0].category !== "食費") {
+  throw new Error("A→B→Aの再取込で最後のID明細訂正が反映されません");
+}
+await context.loadFiles([fileA, fileA]);
+if (context.importState.transactions.filter((transaction) => transaction.date === "2026-04-01").length !== 1) {
+  throw new Error("A→Aの同ID明細再取込で重複しました");
+}
+
+await context.loadFiles([
+  new File(["日付,内容,金額\n2026-05-01,重複,-300"], "期間A.csv"),
+  new File(["日付,内容,金額\n2026-05-01,重複,-300"], "期間B.csv"),
+]);
+if (context.importState.transactions.filter((transaction) => transaction.date === "2026-05-01").length !== 1) {
+  throw new Error("IDなし明細の期間重複排除が維持されません");
+}
+
 console.log("Import column checks passed.");
