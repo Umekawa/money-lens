@@ -25,7 +25,7 @@ assert(state.assets.length === 2, "本体で資産サンプルの2行を取り�
 assert(state.assets.map((asset) => asset.total).join(",") === "1720000,1925000", "本体で資産合計を読み込めること");
 
 const categoryTotals = context.testApi.categorySums(state.transactions);
-assert(categoryTotals.get("住宅") === 82000 && categoryTotals.get("食費") === 24000, "本体のカテゴリ集計がサンプルを集計できること");
+assert(categoryTotals.get("住宅") === 82000n && categoryTotals.get("食費") === 24000n, "本体のカテゴリ集計がサンプルを集計できること");
 assert(state.transactions.reduce((sum, transaction) => sum + transaction.amount, 0) === 165000, "本体の明細金額集計が想定どおりであること");
 
 await context.testApi.load([
