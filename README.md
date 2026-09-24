@@ -58,7 +58,7 @@ python -m http.server 8765 --bind 127.0.0.1
 
 ローカルチェック：
 
-自動開発スクリプトの構文・回帰テストを含むため、PowerShell 7 (`pwsh`) が必要です。WindowsでもUTF-8のスクリプトを正しく読み込み、日本語ログをUTF-8で出力する設定でテストを実行します。
+Node.jsとnpmを用意し、`npm ci` で開発依存を導入してください。標準チェックにPowerShellやローカル専用の自動開発ツールは不要です。
 
 ```powershell
 npm run check
@@ -82,44 +82,9 @@ npm run perf:audit
 
 測定条件と結果の解釈は [大量データ調査](docs/scale-audit-2026-09-23.md) を参照してください。結果は `artifacts/scale-audit/` に保存します。
 
-## 自動開発サイクル
-
-`gh auth login` と OpenCode CLI の認証済み環境で、次のコマンドを実行すると、Issue選択（Issueがなければ発見した改善のIssue作成）、実装、PR作成、AIレビュー、チェック、マージを1サイクル実行できます。
-
-```powershell
-pwsh ./scripts/autodev.ps1
-```
-
-24時間連続で回す場合は次のコマンドを常駐プロセスとして実行します。停止は `Ctrl+C` です。
-
-```powershell
-pwsh ./scripts/autodev.ps1 -Continuous -IntervalMinutes 10
-```
-
-`-ReviewAttempts 2`（既定）回までAIレビューで修正を試みます。最後のレビューが合格でも修正を伴う場合は、ローカルチェックと公開後に変更禁止の確認レビューを1回追加します。解決できない指摘が残った場合や確認レビューでさらに変更された場合は、PRを開いたまま停止します。個人CSV、`csvs/`、秘密情報には触れません。GitHub側ではActionsの成功をマージ条件にし、必要に応じてブランチ保護や通知を設定してください。自動マージは強い権限を持つため、最初は単発実行で結果を確認してから連続運転してください。
-
-停止したPRは、そのブランチ上で `pwsh ./scripts/autodev.ps1 -ResumePullRequest` を実行すると再開できます。ローカル変更をチェック・コミット・pushした後、既存PRのAIレビュー・CI確認・マージを行います。
-
-ブランチ保護設定を取得できない場合にも、このリポジトリのCIジョブ名 `check` を必須チェックとして確認します。別のCIジョブ名を使う場合は `-RequiredChecks` で指定してください（例: `pwsh ./scripts/autodev.ps1 -ResumePullRequest -RequiredChecks check,lint`）。指定したチェックがレビュー済みの同じコミットで成功するまでマージしません。保護設定を取得できる場合は、設定側の必須チェックも合わせて確認します。
-
 ## 開発方針
 
-### 課題調査・一括登録
-
-Issue一覧の取得と課題登録だけを行う場合は、次の専用モードを使います。
-
-```powershell
-pwsh ./scripts/autodev.ps1 -ListIssues
-pwsh ./scripts/autodev.ps1 -IssueBatchPath ./artifacts/issues.json
-```
-
-一括登録ファイルは `[{"title":"課題名","body":"概要・根拠・完了条件"}]` 形式のUTF-8 JSONです。同名の既存Issue（closedを含む）はスキップし、途中失敗後も再実行できます。内容が重複する別タイトルのIssueは登録前に確認してください。このモードには認証済みGitHub CLIが必要です。
-
-既存変更をPRにまとめてレビュー・チェック・マージする場合は、次の単発モードを使います。作業ツリーの変更全体が対象になるため、実行前に `git diff` と `git status` で公開内容を確認してください。既存Issueの自動選択やクローズは行いません。
-
-```powershell
-pwsh ./scripts/autodev.ps1 -PublishCurrentChanges -PublishTitle '調査結果と課題登録の整備' -PublishSummary '調査記録とIssue登録機能を追加します。'
-```
+管理者用の自動開発ツールはGit除外の `.local-dev/` にローカル保管し、公開リポジトリ・CIには含めません。アプリの開発・チェックにこれらのツールは不要です。
 
 調査記録: [2026-09-23のプロダクト課題](docs/product-audit-2026-09-23.md)。
 
