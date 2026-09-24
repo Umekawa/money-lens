@@ -23,4 +23,22 @@ for (const name of ["不足.csv", "余剰.csv", "重複.csv"]) {
   }
 }
 
+for (const [header, label] of [["ID", "ID"], ["明細ID", "明細ID"], ["取引ID", "取引ID"]]) {
+  const filesWithIds = [
+    new File([`日付,内容,金額,${header}\n2026-02-01,店,-100,a`], `${label}-a.csv`),
+    new File([`日付,内容,金額,${header}\n2026-02-01,店,-100,b`], `${label}-b.csv`),
+    new File([`日付,内容,金額,${header}\n2026-02-01,更新,-150,a`], `${label}-update.csv`),
+  ];
+  await context.loadFiles(filesWithIds);
+  const matching = context.importState.transactions.filter((transaction) => transaction.date === "2026-02-01");
+  if (matching.length !== 2 || matching.find((transaction) => transaction.id === "a")?.amount !== -150 || !matching.some((transaction) => transaction.id === "b")) {
+    throw new Error(`${label}列で別IDを保持し、同一IDの訂正版へ更新できません`);
+  }
+}
+
+await context.loadFiles([new File(["日付,内容,金額,ID,id\n2026-03-01,重複,-100,a,b"], "大小文字重複.csv")]);
+if (!context.importState.importMessages.some((message) => message.includes("大小文字重複.csv"))) {
+  throw new Error("大小文字だけが異なる識別ヘッダーの重複を検出できません");
+}
+
 console.log("Import column checks passed.");
