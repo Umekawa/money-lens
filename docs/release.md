@@ -52,7 +52,20 @@ gh release create $tag --verify-tag --title $tag --notes-file $notesFile
 if ($LASTEXITCODE -ne 0) { throw "GitHub Releaseを作成できませんでした。タグは削除せず、同じタグ・SHAで再試行してください" }
 ```
 
-タグが既に存在する場合はコマンドを続けず、`git show "${tag}^{commit}"` などで指すSHAとReleaseを調査する。Release作成に失敗した場合はタグを削除せず、同一タグ・同一SHAで管理者が `gh release create ... --verify-tag` を再試行する。Pagesは `main` のpushでのみデプロイされ、タグpushでは更新されないため、リリース版とPages公開版は、タグ対象SHAと成功したPagesデプロイのSHAが一致するときに限り同一版とみなす。いずれかが未確認なら候補/公開版との対応は未確認として扱い、Release本文や案内で公開済みと表記しない。
+タグが既に存在する場合はコマンドを続けず、`git show "${tag}^{commit}"` などで指すSHAとReleaseを調査する。Release作成に失敗した場合はタグを削除せず、同一タグ・同一SHAで管理者が `gh release create ... --verify-tag` を再試行する。
+
+### Pages公開版との照合
+
+Pagesワークフロー（`.github/workflows/pages.yml`）は、`main` へのpushと `workflow_dispatch` による手動実行で起動する。タグpushだけでは起動しない。手動実行では選択したrefが対象になるため、起動方法だけで公開内容を判断しない。
+
+リリース版と現在のPages公開版は、次の手順で照合する。
+
+1. タグが指すコミットの完全なSHAを確認する。
+2. GitHubの `github-pages` 環境で現在の公開に対応する成功済みデプロイと、その `Deploy GitHub Pages` 実行を特定する。過去に成功した実行だけを根拠にしない。
+3. その実行のイベント（push / workflow_dispatch）、対象ref、コミットSHA、実行URLを記録する。リリース確認のために手動実行する場合は `main` を選択する。
+4. タグ対象SHAと現在の公開デプロイのSHAが一致するときに限り、リリース版とPages公開版を同一版とみなす。後続のpushや手動実行で公開版が更新された場合は再照合する。
+
+いずれかが未確認なら候補/公開版との対応は未確認として扱い、Release本文や案内で公開済みと表記しない。
 
 ## 失敗時の扱い
 
