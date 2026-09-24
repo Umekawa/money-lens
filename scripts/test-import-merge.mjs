@@ -33,6 +33,10 @@ const repeatedExclusion = context.mergeTransactions([idA, idB], [{ id: "a", excl
 if (repeatedExclusion.length !== 1 || repeatedExclusion[0].id !== "b") {
   throw new Error("期間重複した対象外行で別IDを保持できません");
 }
+const excludedAfterIncluded = context.mergeTransactions([idA, idB], [idA, { id: "a", excluded: true }]);
+if (excludedAfterIncluded.length !== 1 || excludedAfterIncluded[0].id !== "b") {
+  throw new Error("同一取込内で後にある対象外訂正を反映できません");
+}
 
 const periodOverlap = context.mergeTransactions([first, idA], [first, idA, idB]);
 if (periodOverlap.length !== 3 || periodOverlap[2].id !== "b") {
