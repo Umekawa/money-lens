@@ -21,6 +21,19 @@ if (idMerged.length !== 2 || idMerged[0].amount !== -150 || idMerged[0].category
   throw new Error("IDが異なる正当な同額明細を保持し、同一IDの訂正版へ置換できません");
 }
 
+const excludedA = context.mergeTransactions([idA, idB], [{ id: "a", excluded: true }]);
+if (excludedA.length !== 1 || excludedA[0].id !== "b") {
+  throw new Error("安定IDの計算対象外への訂正で対象明細だけを除外できません");
+}
+const restoredA = context.mergeTransactions(excludedA, [{ ...idA, amount: -100 }]);
+if (restoredA.length !== 2 || restoredA.find((transaction) => transaction.id === "a")?.amount !== -100) {
+  throw new Error("計算対象外にしたIDを後続の対象行で復帰できません");
+}
+const repeatedExclusion = context.mergeTransactions([idA, idB], [{ id: "a", excluded: true }, { id: "a", excluded: true }]);
+if (repeatedExclusion.length !== 1 || repeatedExclusion[0].id !== "b") {
+  throw new Error("期間重複した対象外行で別IDを保持できません");
+}
+
 const periodOverlap = context.mergeTransactions([first, idA], [first, idA, idB]);
 if (periodOverlap.length !== 3 || periodOverlap[2].id !== "b") {
   throw new Error("別名CSV相当の期間重複で既存行を重複させず、別ID明細を保持できません");
