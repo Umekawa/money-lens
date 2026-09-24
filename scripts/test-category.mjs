@@ -3,7 +3,7 @@ import vm from "node:vm";
 
 const source = await readFile("app.js", "utf8");
 const context = { File, Map, Math };
-vm.runInNewContext(`${source}\n;globalThis.categorySums = categorySums; globalThis.categoryDisplayData = categoryDisplayData;`, context);
+vm.runInNewContext(`${source}\n;globalThis.categorySums = categorySums; globalThis.categoryDisplayData = categoryDisplayData; globalThis.categoryBarWidth = categoryBarWidth;`, context);
 
 const result = context.categorySums([
   { category: "__proto__", amount: -100 },
@@ -42,3 +42,23 @@ if (context.categoryDisplayData(makeTransactions(9)).at(-1)[0] !== "その他") 
   throw new Error("9カテゴリ以上の残額が「その他」に集約されていません");
 }
 console.log("Category display checks passed.");
+
+const assertWidths = (data, expected) => {
+  const widths = data.map(([category, amount]) => context.categoryBarWidth(amount, data));
+  if (widths.some(width => width < 0 || width > 100) || widths.some((width, index) => Math.abs(width - expected[index]) > 1e-10)) {
+    throw new Error(`カテゴリ棒の比率が想定と異なります: ${widths}`);
+  }
+};
+assertWidths([["通常", 100n], ["その他", 1200n]], [100 / 12, 100]);
+assertWidths([["通常", 100n], ["その他", 100n]], [100, 100]);
+assertWidths([["通常", 100n], ["その他", 20n]], [100, 20]);
+const existingOther = context.categoryDisplayData([
+  ...Array.from({ length: 8 }, (_, index) => ({ category: `カテゴリ${index + 1}`, amount: -100 })),
+  { category: "その他", amount: -100 },
+  { category: "追加", amount: -100 },
+]);
+if (existingOther.find(([category]) => category === "その他")?.[1] !== 200n) {
+  throw new Error("既存の「その他」へ集約額が加算されていません");
+}
+assertWidths(existingOther, existingOther.map(([, value]) => Number(value) / 2));
+console.log("Category bar scale checks passed.");
