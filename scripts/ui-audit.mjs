@@ -111,6 +111,27 @@ const runAudit = async () => {
     }
     await page.setViewportSize({ width: 1280, height: 900 });
 
+    for (const width of [1280, 820, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const [buttonSelector, contentSelector, label] of [
+        ['.grid-2 .history-navigation button', '#assetMeta', '資産期間'],
+        ['.trend-panel .history-navigation button', '.trend-legend', '月別凡例'],
+      ]) {
+        const button = page.locator(buttonSelector).first();
+        const content = page.locator(contentSelector);
+        const buttonBounds = await button.boundingBox();
+        const contentBounds = await content.boundingBox();
+        if (buttonBounds && contentBounds && buttonBounds.x < contentBounds.x + contentBounds.width && buttonBounds.x + buttonBounds.width > contentBounds.x && buttonBounds.y < contentBounds.y + contentBounds.height && buttonBounds.y + buttonBounds.height > contentBounds.y) {
+          throw new Error(`${label}と履歴ボタンが${width}px幅で重なっています`);
+        }
+      }
+      const older = page.locator('.trend-panel .history-navigation [data-history="older"]');
+      const newer = page.locator('.trend-panel .history-navigation [data-history="newer"]');
+      await older.click();
+      await newer.click();
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#clearData").click();
     if (!(await page.locator("#emptyState").isVisible())) throw new Error("データクリア後の空状態が表示されません");

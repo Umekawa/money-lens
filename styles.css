@@ -52,3 +52,4 @@ button:focus-visible,select:focus-visible,.search:focus-visible{outline:3px soli
   tr{break-inside:avoid}
   .monthly-trend{display:none}
 }
+ .history-navigation{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 12px}.history-navigation button{min-height:40px;padding:8px 12px;border:1px solid #dce2e4;border-radius:7px;background:#fff;color:#286b64;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.history-navigation button:disabled{cursor:not-allowed;opacity:.45}.history-navigation button:focus-visible{outline:3px solid #204f4a;outline-offset:2px}.asset-meta{margin:0 0 8px}.trend-legend{margin:0 0 16px}
