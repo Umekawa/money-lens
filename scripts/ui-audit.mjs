@@ -89,6 +89,10 @@ const runAudit = async () => {
     if ((await page.locator("#transactions tr").count()) !== 3) throw new Error("月選択後の明細件数が想定と異なります");
 
     const asset = page.locator(".asset-bar").first();
+    const assetBounds = await asset.boundingBox();
+    if (!assetBounds) throw new Error("資産棒の操作範囲がありません");
+    await page.mouse.click(assetBounds.x + assetBounds.width / 2, assetBounds.y + 2);
+    if (!(await page.locator("#assetDetail").isVisible())) throw new Error("資産棒の可視先端の座標クリックで内訳が開きません");
     await asset.click();
     await asset.focus();
     await asset.press("Enter");
