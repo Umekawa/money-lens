@@ -22,6 +22,7 @@ execFileSync(process.execPath, ["scripts/test-monthly-scale.mjs"], { stdio: "inh
 execFileSync(process.execPath, ["scripts/test-import-merge.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-resilience.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-columns.mjs"], { stdio: "inherit" });
+execFileSync(process.execPath, ["scripts/test-import-unsupported.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-large-invalid.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-amount.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/test-import-date.mjs"], { stdio: "inherit" });
