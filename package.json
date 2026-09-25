@@ -1,7 +1,7 @@
 {
   "name": "money-lens",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "scripts": {
     "check": "node scripts/check.mjs",
     "pages:build": "node scripts/build-pages.mjs",
