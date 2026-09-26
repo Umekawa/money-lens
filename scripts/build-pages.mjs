@@ -1,7 +1,7 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 
 const outputDir = "pages-dist";
-const publicFiles = ["index.html", "styles.css", "app.js"];
+const publicFiles = ["index.html", "styles.css", "app.js", "favicon.svg"];
 
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
@@ -23,7 +23,7 @@ if (publishedFiles.join("\n") !== publicFiles.slice().sort().join("\n")) {
 }
 
 const html = await readFile(`${outputDir}/index.html`, "utf8");
-if (!html.includes('src="app.js"') || !html.includes('href="styles.css"')) {
+if (!html.includes('src="app.js"') || !html.includes('href="styles.css"') || !html.includes('href="favicon.svg"')) {
   throw new Error("The Pages artifact is missing an application asset reference");
 }
 const app = await readFile(`${outputDir}/app.js`, "utf8");

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 
-const required = ["index.html", "styles.css", "app.js"];
+const required = ["index.html", "styles.css", "app.js", "favicon.svg"];
 for (const file of required) await readFile(file, "utf8");
 
 execFileSync(process.execPath, ["--check", "app.js"], { stdio: "inherit" });
@@ -9,6 +9,7 @@ execFileSync(process.execPath, ["--check", "app.js"], { stdio: "inherit" });
 const html = await readFile("index.html", "utf8");
 if (!html.includes('src="app.js"')) throw new Error("index.html does not load app.js");
 if (!html.includes('href="styles.css"')) throw new Error("index.html does not load styles.css");
+if (!html.includes('href="favicon.svg"')) throw new Error("index.html does not load favicon.svg");
 
 const trackedCsv = execFileSync("git", ["ls-files", "*.csv"], { encoding: "utf8" })
   .trim()
@@ -34,6 +35,7 @@ execFileSync(process.execPath, ["scripts/test-auto-discovery.mjs"], { stdio: "in
 execFileSync(process.execPath, ["scripts/test-file-startup.mjs"], { stdio: "inherit" });
 execFileSync(process.execPath, ["scripts/build-pages.mjs"], { stdio: "inherit" });
 const publicApp = await readFile("pages-dist/app.js", "utf8");
+if (!(await readFile("pages-dist/favicon.svg", "utf8")).includes("<svg")) throw new Error("公開成果物にSVGファビコンがありません");
 if (!publicApp.includes("const publicDemoEnabled=true;") || publicApp.includes("const publicDemoEnabled=false;")) {
   throw new Error("公開成果物で公開デモモードが有効になっていません");
 }
