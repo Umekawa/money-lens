@@ -121,15 +121,17 @@ try {
       await new Promise(resolve => setTimeout(resolve, 100));
       clearInterval(beat); observer.disconnect();
       const time = operation => { const start = performance.now(); operation(); document.body.offsetHeight; return Math.round((performance.now() - start) * 10) / 10; };
+      const timeSearch = async operation => { const start = performance.now(); operation(); if (searchTimer) await new Promise(resolve => setTimeout(resolve, 140)); document.body.offsetHeight; return Math.round((performance.now() - start) * 10) / 10; };
       const search = document.querySelector('#search');
       const input = value => { search.value = value; search.dispatchEvent(new Event('input', { bubbles: true })); };
       const operations = {};
       if (!plan.invalid && !plan.assets && !plan.history) {
-        operations.searchMatchingMs = time(() => input('合成明細'));
-        operations.searchNoMatchMs = time(() => input('存在しない項目'));
-        operations.searchClearMs = time(() => input(''));
-        operations.typeFiveCharactersMs = time(() => { for (const text of ['合', '合成', '合成明', '合成明細', '合成明細9']) input(text); });
+        operations.searchMatchingMs = await timeSearch(() => input('合成明細'));
+        operations.searchNoMatchMs = await timeSearch(() => input('存在しない項目'));
+        operations.searchClearMs = await timeSearch(() => input(''));
+        operations.typeFiveCharactersMs = await timeSearch(() => { for (const text of ['合', '合成', '合成明', '合成明細', '合成明細9']) input(text); });
         input('');
+        if (searchTimer) await new Promise(resolve => setTimeout(resolve, 140));
         operations.nextPageMs = time(() => document.querySelector('[data-page="next"]')?.click());
         operations.monthFilterMs = time(() => setMonthFilter('2025-01'));
         setMonthFilter('all');
