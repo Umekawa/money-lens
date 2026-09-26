@@ -2,19 +2,16 @@
 
 このリポジトリの公開版は、`package.json` と `package-lock.json` のバージョン、`CHANGELOG.md` の版見出し、Git タグ、GitHub Release を同じ内容で対応させる。
 
-## 現在の対応
+## 版と公開状態の判定
 
-- アプリのバージョン: `1.0.0`
-- 変更履歴: `CHANGELOG.md` の `1.0.0 - 2026-09-25`（既知の制限と未完了の確認を含む）
-- Git タグ: 未作成
-- GitHub Release: 未作成
+`package.json`・`package-lock.json` のバージョンと `CHANGELOG.md` の版見出しは、リリースの準備を示す。これだけで公開済みとは判断しない。版ごとの状態は、その版の `v<version>` タグが指すコミットとGitHub Releaseの公開状況を都度確認する。タグとReleaseの両方が揃った版だけを正式リリース済みと扱う。
 
-したがって、`1.0.0` はこの変更時点のリリース候補であり、GitHub 上で正式リリース済みの版ではない。Pagesの公開デモが閲覧可能でも、タグと Release の作成が完了するまでは正式リリースとの対応を「未公開」と扱う。Issue #269の大量データ対応範囲とIssue #266の公開URL・ブラウザ最終確認は未完了として、レビュー・リリース承認時に取り扱いを判断する。
+Pagesで変更が見られることと正式リリースも別。タグ・Releaseの対象SHAと現在のPages公開SHAの一致を、以下の手順で別途確認する。Issue #269の対応規模とIssue #266のブラウザ最終確認は、解消するまで変更履歴の継続課題として明示する。
 
 ## 手順
 
 1. `main` の作業ツリーが clean であることを確認し、リリース対象の Issue と変更内容を確認する。
-2. `npm version <major|minor|patch> --no-git` を実行して `package.json` と `package-lock.json` のバージョンを同時に更新する。既存の `v` 付きタグと衝突しないバージョンを選ぶ。
+2. `npm version <major|minor|patch> --no-git-tag-version` を実行して `package.json` と `package-lock.json` のバージョンを同時に更新する。既存の `v` 付きタグと衝突しないバージョンを選ぶ。
 3. `CHANGELOG.md` の `Unreleased` の内容を新しい `## <version> - YYYY-MM-DD` に移し、次の `Unreleased` を空で先頭に残す。内容には対象 Issue 番号を含める。
 4. `npm run check` を実行する。失敗した場合はリリースを中止し、原因を修正してから再実行する。
 5. バージョン更新、変更履歴、チェック結果を確認する。個人 CSV、`csvs/`、秘密情報が差分に含まれていないことも確認する。
