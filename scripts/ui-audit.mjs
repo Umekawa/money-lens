@@ -210,6 +210,26 @@ const runAudit = async () => {
     const loadedWidths = await page.evaluate(() => ({ body: document.body.scrollWidth, viewport: window.innerWidth }));
     if ((await page.locator("#expense").textContent()) !== "￥999,999,999" || loadedWidths.body > loadedWidths.viewport + 1) throw new Error("モバイル幅で長い金額が正しく表示されません");
 
+    // 共通の履歴位置を月選択で初期化したら、資産グラフも最新期間へ再描画する。
+    await page.evaluate(async () => {
+      const dates = Array.from({ length: 30 }, (_, index) => `${2023 + Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, "0")}-01`);
+      await load([
+        new File([`日付,金額\n${dates.map(date => `${date},100`).join("\n")}`], "履歴明細.csv"),
+        new File([`日付,合計\n${dates.map(date => `${date},1000`).join("\n")}`], "履歴資産.csv"),
+      ]);
+    });
+    await page.locator('.grid-2 [data-history="older"]').click();
+    if (!(await page.locator("#assetMeta").textContent()).includes("2023-01-01")) throw new Error("資産の古い期間を表示できません");
+    await page.locator("#monthSelect").selectOption("2025-06");
+    if (!(await page.locator("#assetMeta").textContent()).includes("2025-06-01")) throw new Error("月選択後に資産グラフが最新期間へ戻りません");
+    await page.evaluate(async () => {
+      await load([new File([`日付,内容,金額\n${Array.from({ length: 6000 }, (_, index) => `2025-06-01,監査${index},-1`).join("\n")}`], "大量検索.csv")]);
+    });
+    await page.locator("#search").fill("監査1");
+    await page.locator("#search").fill("監査5999");
+    await page.waitForFunction(() => document.querySelector("#transactionSummary")?.textContent === "検索結果 1件");
+    if (!(await page.locator("#transactions").textContent()).includes("監査5999")) throw new Error("連続入力後に最後の検索語が反映されません");
+
     console.log("UI audit passed. Screenshots: artifacts/ui-audit/");
   } finally {
     try {
