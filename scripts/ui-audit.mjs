@@ -106,6 +106,15 @@ const runAudit = async () => {
       const bounds = await detail.boundingBox();
       const plot = await page.locator(".asset-plot").boundingBox();
       if (!bounds || bounds.x < 0 || bounds.x + bounds.width > width || bounds.y < plot.y + plot.height - 1) throw new Error("資産内訳が" + width + "px幅でグラフ直下・画面内に配置されません");
+      const zeroLabel = await page.evaluate(() => {
+        const line = document.querySelector(".asset-zero-line");
+        const label = line.querySelector("span").getBoundingClientRect();
+        const plot = document.querySelector(".asset-plot").getBoundingClientRect();
+        return { text: line.textContent.trim(), top: label.top, bottom: label.bottom, right: label.right, lineTop: line.getBoundingClientRect().top, plotBottom: plot.bottom, plotRight: plot.right, zIndex: Number(getComputedStyle(line).zIndex), barZIndex: Number(getComputedStyle(document.querySelector(".asset-bar")).zIndex) };
+      });
+      if (zeroLabel.text !== "0円" || zeroLabel.top <= zeroLabel.lineTop || zeroLabel.bottom > zeroLabel.plotBottom || zeroLabel.right > zeroLabel.plotRight || zeroLabel.zIndex <= zeroLabel.barZIndex) {
+        throw new Error(`資産推移の0円ラベルが${width}px幅で棒に隠れるかグラフからはみ出しています`);
+      }
       await bar.focus();
       if (!(await detail.isVisible())) throw new Error("フォーカスで資産内訳を開けません");
       await bar.press("Escape");
